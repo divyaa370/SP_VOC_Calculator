@@ -39,4 +39,15 @@ export const AuthService = {
     });
     return () => subscription.subscription.unsubscribe();
   },
+
+  async resetPassword(email: string) {
+    const redirectTo = `${import.meta.env.VITE_APP_URL ?? window.location.origin}/update-password`;
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+    if (error) throw error;
+  },
+
+  async updatePassword(newPassword: string) {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) throw error;
+  },
 };
