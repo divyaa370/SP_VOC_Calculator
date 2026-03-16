@@ -1,11 +1,11 @@
 import { Suspense } from "react";
-import { useRoutes, Routes, Route } from "react-router-dom";
-import Home from "./components/home";
+import { useRoutes, Routes, Route, Navigate } from "react-router-dom";
 import { SignInForm } from "./components/auth/SignInForm";
 import { SignUpForm } from "./components/auth/SignUpForm";
 import { ForgotPasswordForm } from "./components/auth/ForgotPasswordForm";
 import { ResetPasswordForm } from "./components/auth/ResetPasswordForm";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
+import { Dashboard } from "./components/Dashboard";
 import { AuthProvider } from "./context/AuthContext";
 import routes from "tempo-routes";
 
@@ -20,13 +20,14 @@ function App() {
             <Route path="/reset-password" element={<ForgotPasswordForm />} />
             <Route path="/update-password" element={<ResetPasswordForm />} />
             <Route
-              path="/"
+              path="/app"
               element={
                 <ProtectedRoute>
-                  <Home />
+                  <Dashboard />
                 </ProtectedRoute>
               }
             />
+            <Route path="/" element={<Navigate to="/app" replace />} />
           </Routes>
           {import.meta.env.VITE_TEMPO === "true" && useRoutes(routes)}
         </>

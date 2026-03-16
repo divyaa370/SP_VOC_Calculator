@@ -2,22 +2,24 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, Navigate } from "react-router-dom";
 import { AuthService } from "../../services/authService";
+import { useAuth } from "../../context/AuthContext";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 
 const schema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(1, "Password is required"),
+  email: z.string().email("Invalid email address").max(254, "Email too long"),
+  password: z.string().min(1, "Password is required").max(128, "Password too long"),
 });
 
 type FormData = z.infer<typeof schema>;
 
 export function SignInForm() {
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
   const [serverError, setServerError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -27,12 +29,24 @@ export function SignInForm() {
     formState: { errors },
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center w-screen h-screen">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
+
+  if (user) {
+    return <Navigate to="/app" replace />;
+  }
+
   const onSubmit = async (data: FormData) => {
     setLoading(true);
     setServerError("");
     try {
       await AuthService.signIn(data);
-      navigate("/");
+      navigate("/app");
     } catch (err: unknown) {
       setServerError("Invalid email or password");
     } finally {
@@ -50,7 +64,7 @@ export function SignInForm() {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-1">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" {...register("email")} autoComplete="email" />
+              <Input id="email" type="email" {...register("email")} autoComplete="email" maxLength={254} />
               {errors.email && (
                 <p className="text-sm text-destructive">{errors.email.message}</p>
               )}
@@ -63,6 +77,7 @@ export function SignInForm() {
                 type="password"
                 {...register("password")}
                 autoComplete="current-password"
+                maxLength={128}
               />
               {errors.password && (
                 <p className="text-sm text-destructive">{errors.password.message}</p>
