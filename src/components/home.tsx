@@ -1,8 +1,12 @@
+import { useState } from "react";
 import { LogoutButton } from "./auth/LogoutButton";
 import { useAuth } from "../context/AuthContext";
+import { ItemEntryForm, type ItemFormData } from "./ItemEntryForm";
+import { CostDashboard } from "./CostDashboard";
 
 function Home() {
   const { user } = useAuth();
+  const [itemData, setItemData] = useState<ItemFormData | null>(null);
 
   return (
     <div className="w-screen h-screen flex flex-col">
@@ -13,8 +17,12 @@ function Home() {
           <LogoutButton />
         </div>
       </header>
-      <main className="flex-1 p-6">
-        {/* App content goes here */}
+      <main className="flex-1 p-6 overflow-y-auto flex justify-center">
+        {!itemData ? (
+          <ItemEntryForm onSubmit={setItemData} />
+        ) : (
+          <CostDashboard item={itemData} onReset={() => setItemData(null)} />
+        )}
       </main>
     </div>
   );
