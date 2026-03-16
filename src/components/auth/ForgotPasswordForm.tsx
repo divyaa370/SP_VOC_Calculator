@@ -54,7 +54,7 @@ export function ForgotPasswordForm() {
               </Link>
             </div>
           ) : (
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
               <div className="space-y-1">
                 <Label htmlFor="email">Email</Label>
                 <Input id="email" type="email" {...register("email")} autoComplete="email" />

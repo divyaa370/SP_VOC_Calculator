@@ -94,9 +94,9 @@ describe("ResetPasswordForm", () => {
     });
 
     renderWithRouter(<ResetPasswordForm />, { initialEntries: ["/update-password"] });
-    await waitFor(() => screen.getByLabelText(/new password/i));
+    await waitFor(() => screen.getByLabelText(/^new password$/i));
 
-    await userEvent.type(screen.getByLabelText(/new password/i), "Password1");
+    await userEvent.type(screen.getByLabelText(/^new password$/i), "Password1");
     await userEvent.type(screen.getByLabelText(/confirm new password/i), "Different1");
     await userEvent.click(screen.getByRole("button", { name: /update password/i }));
 
@@ -127,8 +127,8 @@ describe("ResetPasswordForm", () => {
       </MemoryRouter>
     );
 
-    await waitFor(() => screen.getByLabelText(/new password/i));
-    await userEvent.type(screen.getByLabelText(/new password/i), "NewPass1");
+    await waitFor(() => screen.getByLabelText(/^new password$/i));
+    await userEvent.type(screen.getByLabelText(/^new password$/i), "NewPass1");
     await userEvent.type(screen.getByLabelText(/confirm new password/i), "NewPass1");
     await userEvent.click(screen.getByRole("button", { name: /update password/i }));
 
