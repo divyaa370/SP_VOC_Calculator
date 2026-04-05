@@ -48,7 +48,10 @@ export function SignInForm() {
       await AuthService.signIn(data);
       navigate("/app");
     } catch (err: unknown) {
-      setServerError("Invalid email or password");
+      const msg = err instanceof Error ? err.message : "";
+      setServerError(
+        msg.toLowerCase().includes("invalid") ? "Invalid email or password." : msg || "Sign in failed."
+      );
     } finally {
       setLoading(false);
     }

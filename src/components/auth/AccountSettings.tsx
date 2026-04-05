@@ -4,7 +4,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { AuthService } from "../../services/authService";
 import { supabase } from "../../lib/supabaseClient";
-import { useAuth } from "../../context/AuthContext";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -12,7 +11,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 
 const schema = z
   .object({
-    currentPassword: z.string().min(1, "Current password is required").max(128, "Password too long"),
     newPassword: z
       .string()
       .min(8, "Password must be at least 8 characters")
@@ -29,7 +27,6 @@ const schema = z
 type FormData = z.infer<typeof schema>;
 
 export function AccountSettings() {
-  const { user } = useAuth();
   const [serverError, setServerError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -42,23 +39,11 @@ export function AccountSettings() {
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
   const onSubmit = async (data: FormData) => {
-    if (!user?.email) return;
-
     setLoading(true);
     setServerError("");
     setSuccessMessage("");
 
     try {
-      // F3.03: re-authenticate with current password before updating
-      await AuthService.signIn({ email: user.email, password: data.currentPassword });
-    } catch {
-      setServerError("Current password is incorrect. Please try again.");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      // F3.04: update the password
       await AuthService.updatePassword(data.newPassword);
       // F3.06: invalidate all other active sessions
       await supabase.auth.signOut({ scope: "others" });
@@ -78,20 +63,6 @@ export function AccountSettings() {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="space-y-1">
-            <Label htmlFor="currentPassword">Current password</Label>
-            <Input
-              id="currentPassword"
-              type="password"
-              {...register("currentPassword")}
-              autoComplete="current-password"
-              maxLength={128}
-            />
-            {errors.currentPassword && (
-              <p className="text-sm text-destructive">{errors.currentPassword.message}</p>
-            )}
-          </div>
-
           <div className="space-y-1">
             <Label htmlFor="newPassword">New password</Label>
             <Input
