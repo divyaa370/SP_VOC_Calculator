@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import type { ItemFormData } from "./ItemEntryForm";
+import { SustainabilityScore } from "./SustainabilityScore";
 
 // ── Cost calculation helpers ───────────────────────────────────────────────
 
@@ -186,6 +187,9 @@ export function CostDashboard({ item, onReset }: CostDashboardProps) {
           </ResponsiveContainer>
         </CardContent>
       </Card>
+
+      {/* Sustainability score */}
+      <SustainabilityScore item={item} />
     </div>
   );
 }

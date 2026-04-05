@@ -6,6 +6,7 @@ import { ForgotPasswordForm } from "./components/auth/ForgotPasswordForm";
 import { ResetPasswordForm } from "./components/auth/ResetPasswordForm";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { Dashboard } from "./components/Dashboard";
+import { AccountSettings } from "./components/auth/AccountSettings";
 import { AuthProvider } from "./context/AuthContext";
 import routes from "tempo-routes";
 
@@ -24,6 +25,24 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/app/settings"
+              element={
+                <ProtectedRoute>
+                  <div className="w-screen min-h-screen flex flex-col">
+                    <header className="flex items-center justify-between px-6 py-4 border-b">
+                      <span className="font-semibold">TrueCost</span>
+                      <a href="/app" className="text-sm text-muted-foreground underline">
+                        Back to dashboard
+                      </a>
+                    </header>
+                    <main className="flex-1 p-6 flex items-center justify-center">
+                      <AccountSettings />
+                    </main>
+                  </div>
                 </ProtectedRoute>
               }
             />
