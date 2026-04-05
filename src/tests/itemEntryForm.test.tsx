@@ -92,8 +92,8 @@ describe("ItemEntryForm – car validation", () => {
   it("calls onSubmit with correct car data when form is valid", async () => {
     const { onSubmit } = renderForm();
 
-    await userEvent.type(screen.getByLabelText(/make/i), "Toyota");
-    await userEvent.type(screen.getByLabelText(/model/i), "Camry");
+    await userEvent.selectOptions(screen.getByLabelText(/make/i), "Toyota");
+    await userEvent.selectOptions(screen.getByLabelText(/model/i), "Camry");
     await userEvent.clear(screen.getByLabelText(/year/i));
     await userEvent.type(screen.getByLabelText(/year/i), "2022");
     await userEvent.selectOptions(screen.getByLabelText(/fuel type/i), "gasoline");

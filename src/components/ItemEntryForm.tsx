@@ -1,10 +1,11 @@
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { CAR_DATA, CAR_MAKES } from "../data/carData";
 
 // ── Schemas ────────────────────────────────────────────────────────────────
 
@@ -68,13 +69,15 @@ export function ItemEntryForm({ onSubmit }: ItemEntryFormProps) {
     handleSubmit,
     watch,
     control,
+    setValue,
     formState: { errors },
   } = useForm<ItemFormData>({
     resolver: zodResolver(schema),
-    defaultValues: { category: "car" } as ItemFormData,
+    defaultValues: { category: "car", make: "", model: "" } as ItemFormData,
   });
 
   const category = watch("category");
+  const selectedMake = useWatch({ control, name: "make" as never }) as string | undefined;
 
   return (
     <Card className="w-full max-w-lg">
@@ -108,14 +111,51 @@ export function ItemEntryForm({ onSubmit }: ItemEntryFormProps) {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <Label htmlFor="make">Make</Label>
-                  <Input id="make" {...register("make")} placeholder="Toyota" />
+                  <Controller
+                    name="make"
+                    control={control}
+                    render={({ field }) => (
+                      <select
+                        id="make"
+                        {...field}
+                        onChange={(e) => {
+                          field.onChange(e);
+                          setValue("model" as never, "" as never);
+                        }}
+                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      >
+                        <option value="">Select make</option>
+                        {CAR_MAKES.map((make) => (
+                          <option key={make} value={make}>{make}</option>
+                        ))}
+                      </select>
+                    )}
+                  />
                   {"make" in errors && errors.make && (
                     <p className="text-sm text-destructive">{errors.make.message}</p>
                   )}
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="model">Model</Label>
-                  <Input id="model" {...register("model")} placeholder="Camry" />
+                  <Controller
+                    name="model"
+                    control={control}
+                    render={({ field }) => (
+                      <select
+                        id="model"
+                        {...field}
+                        disabled={!selectedMake}
+                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <option value="">
+                          {selectedMake ? "Select model" : "Select make first"}
+                        </option>
+                        {(CAR_DATA[selectedMake ?? ""] ?? []).map((model) => (
+                          <option key={model} value={model}>{model}</option>
+                        ))}
+                      </select>
+                    )}
+                  />
                   {"model" in errors && errors.model && (
                     <p className="text-sm text-destructive">{errors.model.message}</p>
                   )}
