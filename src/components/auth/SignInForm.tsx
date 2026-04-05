@@ -19,7 +19,7 @@ type FormData = z.infer<typeof schema>;
 
 export function SignInForm() {
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, enterGuestMode } = useAuth();
   const [serverError, setServerError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -88,6 +88,15 @@ export function SignInForm() {
 
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Signing in..." : "Sign In"}
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={() => { enterGuestMode(); navigate("/app"); }}
+            >
+              Continue as Guest
             </Button>
 
             <p className="text-sm text-center text-muted-foreground">

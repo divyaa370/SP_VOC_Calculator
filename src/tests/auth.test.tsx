@@ -31,16 +31,19 @@ function renderWithRouter(ui: React.ReactElement, { initialEntries = ["/"] } = {
 describe("SignInForm", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("renders email and password fields", () => {
+  it("renders email and password fields", async () => {
     renderWithRouter(<SignInForm />, { initialEntries: ["/signin"] });
-    expect(screen.getByLabelText(/email/i)).toBeDefined();
-    expect(screen.getByLabelText(/password/i)).toBeDefined();
+    await waitFor(() => {
+      expect(screen.getByLabelText(/email/i)).toBeDefined();
+      expect(screen.getByLabelText(/password/i)).toBeDefined();
+    });
   });
 
   it("shows error on invalid credentials", async () => {
     vi.mocked(AuthService.signIn).mockRejectedValueOnce(new Error("Invalid login credentials"));
     renderWithRouter(<SignInForm />, { initialEntries: ["/signin"] });
 
+    await waitFor(() => screen.getByLabelText(/email/i));
     await userEvent.type(screen.getByLabelText(/email/i), "bad@example.com");
     await userEvent.type(screen.getByLabelText(/password/i), "wrongpass");
     await userEvent.click(screen.getByRole("button", { name: /sign in/i }));
@@ -54,6 +57,7 @@ describe("SignInForm", () => {
     vi.mocked(AuthService.signIn).mockResolvedValueOnce({ user: { id: "1" }, session: {} } as never);
     renderWithRouter(<SignInForm />, { initialEntries: ["/signin"] });
 
+    await waitFor(() => screen.getByLabelText(/email/i));
     await userEvent.type(screen.getByLabelText(/email/i), "user@example.com");
     await userEvent.type(screen.getByLabelText(/password/i), "Password1");
     await userEvent.click(screen.getByRole("button", { name: /sign in/i }));

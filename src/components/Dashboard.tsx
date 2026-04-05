@@ -11,7 +11,7 @@ import { Button } from "./ui/button";
 type Tab = "new" | "saved";
 
 export function Dashboard() {
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const userId = user?.id ?? "";
 
   const [tab, setTab] = useState<Tab>("new");
@@ -59,11 +59,19 @@ export function Dashboard() {
       <header className="flex items-center justify-between px-6 py-4 border-b">
         <span className="font-semibold">TrueCost</span>
         <div className="flex items-center gap-4">
-          <span className="text-sm text-muted-foreground">{user?.email}</span>
-          <Link to="/app/settings" className="text-sm text-muted-foreground underline">
-            Settings
-          </Link>
-          <LogoutButton />
+          {isGuest ? (
+            <Link to="/signin" className="text-sm underline">
+              Sign in to save analyses
+            </Link>
+          ) : (
+            <>
+              <span className="text-sm text-muted-foreground">{user?.email}</span>
+              <Link to="/app/settings" className="text-sm text-muted-foreground underline">
+                Settings
+              </Link>
+              <LogoutButton />
+            </>
+          )}
         </div>
       </header>
 
@@ -80,17 +88,19 @@ export function Dashboard() {
         >
           New Analysis
         </button>
-        <button
-          onClick={() => handleSwitchTab("saved")}
-          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-            tab === "saved"
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-          data-testid="tab-saved"
-        >
-          Saved ({analyses.length})
-        </button>
+        {!isGuest && (
+          <button
+            onClick={() => handleSwitchTab("saved")}
+            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              tab === "saved"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+            data-testid="tab-saved"
+          >
+            Saved ({analyses.length})
+          </button>
+        )}
       </div>
 
       <main className="flex-1 p-6 flex items-start justify-center">
@@ -104,11 +114,13 @@ export function Dashboard() {
           <ItemEntryForm onSubmit={setItemData} />
         ) : (
           <div className="w-full max-w-4xl space-y-4">
-            <div className="flex items-center justify-between">
-              <Button size="sm" onClick={handleSave} disabled={savedConfirm}>
-                {savedConfirm ? "Saved!" : "Save analysis"}
-              </Button>
-            </div>
+            {!isGuest && (
+              <div className="flex items-center justify-between">
+                <Button size="sm" onClick={handleSave} disabled={savedConfirm}>
+                  {savedConfirm ? "Saved!" : "Save analysis"}
+                </Button>
+              </div>
+            )}
             <CostDashboard item={itemData} onReset={handleReset} />
           </div>
         )}
