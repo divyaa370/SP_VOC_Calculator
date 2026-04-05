@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { AuthService } from "../../services/authService";
+import { supabase } from "../../lib/supabaseClient";
 import { useAuth } from "../../context/AuthContext";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -59,6 +60,8 @@ export function AccountSettings() {
     try {
       // F3.04: update the password
       await AuthService.updatePassword(data.newPassword);
+      // F3.06: invalidate all other active sessions
+      await supabase.auth.signOut({ scope: "others" });
       setSuccessMessage("Password updated successfully.");
       reset();
     } catch (err: unknown) {

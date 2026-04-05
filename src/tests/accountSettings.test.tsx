@@ -5,6 +5,18 @@ import { MemoryRouter } from "react-router-dom";
 import { AuthProvider } from "../context/AuthContext";
 import { AccountSettings } from "../components/auth/AccountSettings";
 
+const { mockSignOut } = vi.hoisted(() => ({
+  mockSignOut: vi.fn().mockResolvedValue({}),
+}));
+
+vi.mock("../lib/supabaseClient", () => ({
+  supabase: {
+    auth: {
+      signOut: mockSignOut,
+    },
+  },
+}));
+
 vi.mock("../services/authService", () => ({
   AuthService: {
     signIn: vi.fn(),
@@ -169,5 +181,21 @@ describe("AccountSettings", () => {
     });
 
     resolveSignIn();
+  });
+
+  it("invalidates other sessions after successful password update", async () => {
+    vi.mocked(AuthService.signIn).mockResolvedValueOnce({ user: { id: "1" }, session: {} } as never);
+    vi.mocked(AuthService.updatePassword).mockResolvedValueOnce(undefined);
+    renderSettings();
+    await waitFor(() => screen.getByLabelText(/current password/i));
+
+    await userEvent.type(screen.getByLabelText(/current password/i), "OldPass1");
+    await userEvent.type(screen.getByLabelText(/^new password$/i),"NewPass1");
+    await userEvent.type(screen.getByLabelText(/confirm new password/i),"NewPass1");
+    await userEvent.click(screen.getByRole("button", { name: /update password/i }));
+
+    await waitFor(() => {
+      expect(mockSignOut).toHaveBeenCalledWith({ scope: "others" });
+    });
   });
 });
