@@ -13,6 +13,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import type { ItemFormData } from "./ItemEntryForm";
 import { SustainabilityScore } from "./SustainabilityScore";
+import { RecommendationsPanel } from "./RecommendationsPanel";
 
 // ── Cost calculation helpers ───────────────────────────────────────────────
 
@@ -187,6 +188,9 @@ export function CostDashboard({ item, onReset }: CostDashboardProps) {
           </ResponsiveContainer>
         </CardContent>
       </Card>
+
+      {/* Alerts & recommendations */}
+      <RecommendationsPanel item={item} monthlyTotal={monthlyTotal} />
 
       {/* Sustainability score */}
       <SustainabilityScore item={item} />
