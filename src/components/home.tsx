@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { ItemEntryForm, type ItemFormData, type CarFormData } from "./ItemEntryForm";
 import { ResultsDashboard } from "./ResultsDashboard";
 import { getUserProfile, type UserProfile } from "../lib/auth";
+import { useLiveData } from "../context/LiveDataContext";
 
 const NAV_LINKS = [
   { href: "/saved-analyses", label: "Saved" },
@@ -15,6 +16,7 @@ const NAV_LINKS = [
 
 function Home() {
   const { user } = useAuth();
+  const liveData = useLiveData();
   const [itemData, setItemData] = useState<ItemFormData | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -33,18 +35,20 @@ function Home() {
     }
   }, []);
 
-  // Derive ItemEntryForm defaults from profile
+  // Derive ItemEntryForm defaults from profile + live data.
+  // Priority: profile override > live API data > hardcoded constant.
+  // User edits in the form always take final precedence.
   const profileDefaults = useMemo<Partial<CarFormData>>(() => {
-    if (!profile) return {};
     const d: Partial<CarFormData> = {};
-    if (profile.commuteDaysPerWeek && profile.oneWayCommuteMiles) {
+    if (profile?.commuteDaysPerWeek && profile.oneWayCommuteMiles) {
       d.annualMileage = Math.round(profile.oneWayCommuteMiles * 2 * profile.commuteDaysPerWeek * 52);
     }
-    if (profile.preferredFuelPrice) d.fuelPricePerUnit = profile.preferredFuelPrice;
-    if (profile.monthlyInsurancePremium) d.insuranceMonthly = profile.monthlyInsurancePremium;
-    if (profile.stateOfRegistration) d.state = profile.stateOfRegistration;
+    // Fuel price: profile override > live EIA gas price > static constant
+    d.fuelPricePerUnit = profile?.preferredFuelPrice ?? liveData.gasPricePerGallon;
+    if (profile?.monthlyInsurancePremium) d.insuranceMonthly = profile.monthlyInsurancePremium;
+    if (profile?.stateOfRegistration) d.state = profile.stateOfRegistration;
     return d;
-  }, [profile]);
+  }, [profile, liveData.gasPricePerGallon]);
 
   return (
     <div className="w-screen min-h-screen flex flex-col">

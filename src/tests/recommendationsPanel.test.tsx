@@ -30,9 +30,11 @@ const largeDog: ItemFormData = {
 };
 
 describe("buildRecommendations", () => {
-  it("warns when annual car cost exceeds $12k", () => {
-    const alerts = buildRecommendations(gasCar, 1100);
-    expect(alerts.some((a) => a.type === "warning" && /12,000/.test(a.message))).toBe(true);
+  it("warns when annual car cost exceeds 125% of the national average", () => {
+    // monthlyTotal=1100 → annualCost=$13,200 > threshold ($15,228 at default AAA avg)
+    // Use a higher monthly to ensure we exceed the dynamic 125% threshold
+    const alerts = buildRecommendations(gasCar, 1300);
+    expect(alerts.some((a) => a.type === "warning" && /national average/i.test(a.message))).toBe(true);
   });
 
   it("warns on high purchase price", () => {

@@ -1,20 +1,27 @@
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import type { ItemFormData, CarFormData } from "./ItemEntryForm";
+import { AVG_ANNUAL_OWNERSHIP_COST } from "../lib/constants";
 
 interface Alert {
   type: "warning" | "info";
   message: string;
 }
 
-export function buildRecommendations(item: ItemFormData, monthlyTotal: number): Alert[] {
+export function buildRecommendations(
+  item: ItemFormData,
+  monthlyTotal: number,
+  avgAnnualOwnershipCost = AVG_ANNUAL_OWNERSHIP_COST
+): Alert[] {
   const alerts: Alert[] = [];
   const annualCost = monthlyTotal * 12;
+  // High-cost threshold: 25% above the current national average (AAA data).
+  const highCostThreshold = Math.round(avgAnnualOwnershipCost * 1.25);
 
   if (item.category === "car") {
     const car = item as CarFormData;
 
-    if (annualCost > 12000) {
-      alerts.push({ type: "warning", message: `Annual ownership cost exceeds $12,000. Review your budget to ensure this is sustainable.` });
+    if (annualCost > highCostThreshold) {
+      alerts.push({ type: "warning", message: `Annual ownership cost exceeds $${highCostThreshold.toLocaleString()} (125% of the national average). Review your budget to ensure this is sustainable.` });
     }
     if (car.purchasePrice > 40000) {
       alerts.push({ type: "warning", message: "High purchase price means steep depreciation. Expect to lose significant value in the first 3 years." });
@@ -56,10 +63,11 @@ export function buildRecommendations(item: ItemFormData, monthlyTotal: number): 
 interface RecommendationsPanelProps {
   item: ItemFormData;
   monthlyTotal: number;
+  avgAnnualOwnershipCost?: number;
 }
 
-export function RecommendationsPanel({ item, monthlyTotal }: RecommendationsPanelProps) {
-  const alerts = buildRecommendations(item, monthlyTotal);
+export function RecommendationsPanel({ item, monthlyTotal, avgAnnualOwnershipCost }: RecommendationsPanelProps) {
+  const alerts = buildRecommendations(item, monthlyTotal, avgAnnualOwnershipCost);
 
   if (alerts.length === 0) return null;
 

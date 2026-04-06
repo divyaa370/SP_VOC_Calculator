@@ -14,6 +14,10 @@ import {
   getDepreciationSegment,
 } from "../lib/costConfig";
 import { getMonthlyMaintenance } from "../lib/maintenanceData";
+import { getMaintenanceCostPerMile } from "../data/maintenanceRates";
+import { NATIONAL_AVG_MONTHLY_INSURANCE } from "../lib/constants";
+import { getInsuranceMultiplier } from "../data/insuranceIndex";
+import { useLiveData, formatDataAge } from "../context/LiveDataContext";
 
 // ── Calculation engine ────────────────────────────────────────────────────
 
@@ -27,7 +31,13 @@ export interface MonthlyCosts {
   Depreciation: number;
 }
 
-export function computeMonthlyCosts(item: ItemFormData): MonthlyCosts {
+export interface LiveRates {
+  maintenanceCostPerMile?: number;
+  nationalAvgMonthlyInsurance?: number;
+  insuranceIndexMultiplier?: number;
+}
+
+export function computeMonthlyCosts(item: ItemFormData, rates: LiveRates = {}): MonthlyCosts {
   if (item.category !== "car") {
     // Legacy pet fallback
     return {
@@ -51,7 +61,23 @@ export function computeMonthlyCosts(item: ItemFormData): MonthlyCosts {
 
   const fuelMonthly = (car.annualMileage / car.mpg * car.fuelPricePerUnit) / 12;
 
-  const maintenanceMonthly = getMonthlyMaintenance(car.make, car.year);
+  // Maintenance: blend RepairPal make-based estimate with AAA per-mile rate if available.
+  // RepairPal is more accurate for brand-specific costs; AAA provides cross-validation.
+  const repairPalMonthly = getMonthlyMaintenance(car.make, car.year);
+  const aaaCostPerMile = rates.maintenanceCostPerMile
+    ?? getMaintenanceCostPerMile(car.make, car.fuelType, car.model);
+  const aaaMonthly = (aaaCostPerMile * car.annualMileage) / 12;
+  // Weight: 60% RepairPal (make/age specific), 40% AAA (segment/mileage based)
+  const maintenanceMonthly = repairPalMonthly * 0.6 + aaaMonthly * 0.4;
+
+  // Insurance: user-entered value takes precedence (user override always wins).
+  // If the user left it at 0, fall back to national avg * state multiplier.
+  let insuranceMonthly = car.insuranceMonthly;
+  if (!insuranceMonthly || insuranceMonthly === 0) {
+    const baseAvg = rates.nationalAvgMonthlyInsurance ?? NATIONAL_AVG_MONTHLY_INSURANCE;
+    const multiplier = rates.insuranceIndexMultiplier ?? getInsuranceMultiplier(car.state);
+    insuranceMonthly = Math.round(baseAvg * multiplier);
+  }
 
   // Depreciation: year-1 value drop spread monthly
   const segment = getDepreciationSegment(car.make, car.fuelType);
@@ -61,7 +87,7 @@ export function computeMonthlyCosts(item: ItemFormData): MonthlyCosts {
   return {
     "Loan Payment": Math.round(loanPayment * 100) / 100,
     Fuel: Math.round(fuelMonthly * 100) / 100,
-    Insurance: car.insuranceMonthly,
+    Insurance: Math.round(insuranceMonthly * 100) / 100,
     Maintenance: Math.round(maintenanceMonthly * 100) / 100,
     Registration: Math.round((car.registrationAnnual / 12) * 100) / 100,
     Parking: car.parkingMonthly,
@@ -183,8 +209,15 @@ export function CostDashboard({ item, onReset, initialProjectionYears }: CostDas
   const [projectionYears, setProjectionYears] = useState(initialProjectionYears ?? 5);
   const [pdfLoading, setPdfLoading] = useState(false);
   const dashboardRef = useRef<HTMLDivElement>(null);
+  const liveData = useLiveData();
 
-  const costs = computeMonthlyCosts(item);
+  const liveRates: LiveRates = {
+    maintenanceCostPerMile: liveData.maintenanceCostPerMile,
+    nationalAvgMonthlyInsurance: liveData.nationalAvgMonthlyInsurance,
+    insuranceIndexMultiplier: liveData.insuranceIndexMultiplier,
+  };
+
+  const costs = computeMonthlyCosts(item, liveRates);
   const monthlyTotal = Object.values(costs).reduce((a, b) => a + b, 0);
   const yearlyTotal = monthlyTotal * 12;
   const projectionData = buildYearlyProjection(costs, item, projectionYears);
@@ -235,6 +268,23 @@ export function CostDashboard({ item, onReset, initialProjectionYears }: CostDas
           </button>
         </div>
       </div>
+
+      {/* Data freshness label */}
+      {(() => {
+        const age = formatDataAge(liveData.dataAge);
+        const allFailed = Object.keys(liveData.errors).length > 0 && !liveData.isLoading;
+        return (
+          <p className="text-xs text-muted-foreground -mt-4">
+            {liveData.isLoading
+              ? "Loading live rates…"
+              : allFailed
+                ? "Using estimated values (live data unavailable)"
+                : age
+                  ? `Data as of ${age}`
+                  : "Using estimated values"}
+          </p>
+        );
+      })()}
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3" data-testid="summary-cards">
@@ -314,7 +364,7 @@ export function CostDashboard({ item, onReset, initialProjectionYears }: CostDas
       </Card>
 
       {/* Alerts & recommendations */}
-      <RecommendationsPanel item={item} monthlyTotal={monthlyTotal} />
+      <RecommendationsPanel item={item} monthlyTotal={monthlyTotal} avgAnnualOwnershipCost={liveData.avgAnnualOwnershipCost} />
 
       {/* Sustainability score */}
       <SustainabilityScore item={item} />
