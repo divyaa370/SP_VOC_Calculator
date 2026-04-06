@@ -1,4 +1,5 @@
 import { supabase } from "./supabaseClient";
+import { shouldUseSupabase, markTableAvailable } from "./persistence";
 
 export type ExpenseCategory = "fuel" | "maintenance" | "insurance" | "repair" | "registration" | "parking" | "other";
 
@@ -15,11 +16,15 @@ export interface ExpenseEntry {
   underWarranty: boolean;
 }
 
-// ── Supabase ops ───────────────────────────────────────────────────────────
+const TABLE = "expense_log";
+
+// ── Public API ─────────────────────────────────────────────────────────────
 
 export async function getExpenses(userId: string, analysisId?: string): Promise<ExpenseEntry[]> {
+  if (!(await shouldUseSupabase(TABLE))) return ls.getAll(userId, analysisId);
+
   let q = supabase
-    .from("expense_log")
+    .from(TABLE)
     .select("*")
     .eq("user_id", userId)
     .order("logged_at", { ascending: false });
@@ -27,17 +32,19 @@ export async function getExpenses(userId: string, analysisId?: string): Promise<
   if (analysisId) q = q.eq("analysis_id", analysisId);
 
   const { data, error } = await q;
-  if (error) return getLocalExpenses(userId);
+  if (error) return ls.getAll(userId, analysisId);
 
-  return (data ?? []).map(mapRow);
+  return (data ?? []).map(fromRow);
 }
 
 export async function addExpense(
   userId: string,
   entry: Omit<ExpenseEntry, "id" | "userId" | "loggedAt">
 ): Promise<ExpenseEntry> {
+  if (!(await shouldUseSupabase(TABLE))) return ls.add(userId, entry);
+
   const { data, error } = await supabase
-    .from("expense_log")
+    .from(TABLE)
     .insert({
       user_id: userId,
       analysis_id: entry.analysisId ?? null,
@@ -51,39 +58,27 @@ export async function addExpense(
     .select("*")
     .single();
 
-  if (error || !data) return addLocalExpense(userId, entry);
-  return mapRow(data);
+  if (error || !data) return ls.add(userId, entry);
+
+  markTableAvailable(TABLE);
+  return fromRow(data);
 }
 
 export async function deleteExpense(userId: string, id: string): Promise<void> {
-  const { error } = await supabase.from("expense_log").delete().eq("id", id).eq("user_id", userId);
-  if (error) deleteLocalExpense(userId, id);
+  if (!(await shouldUseSupabase(TABLE))) { ls.remove(userId, id); return; }
+
+  const { error } = await supabase
+    .from(TABLE)
+    .delete()
+    .eq("id", id)
+    .eq("user_id", userId);
+
+  if (error) ls.remove(userId, id);
 }
 
-// ── localStorage fallbacks ─────────────────────────────────────────────────
+// ── Row mapper ─────────────────────────────────────────────────────────────
 
-const lsKey = (userId: string) => `truecost_expenses_${userId}`;
-
-function getLocalExpenses(userId: string): ExpenseEntry[] {
-  try { return JSON.parse(localStorage.getItem(lsKey(userId)) ?? "[]"); }
-  catch { return []; }
-}
-
-function addLocalExpense(
-  userId: string,
-  entry: Omit<ExpenseEntry, "id" | "userId" | "loggedAt">
-): ExpenseEntry {
-  const list = getLocalExpenses(userId);
-  const full: ExpenseEntry = { ...entry, id: crypto.randomUUID(), userId, loggedAt: new Date().toISOString(), underWarranty: entry.underWarranty };
-  localStorage.setItem(lsKey(userId), JSON.stringify([full, ...list]));
-  return full;
-}
-
-function deleteLocalExpense(userId: string, id: string) {
-  localStorage.setItem(lsKey(userId), JSON.stringify(getLocalExpenses(userId).filter((e) => e.id !== id)));
-}
-
-function mapRow(r: Record<string, unknown>): ExpenseEntry {
+function fromRow(r: Record<string, unknown>): ExpenseEntry {
   return {
     id: r.id as string,
     userId: r.user_id as string,
@@ -97,3 +92,32 @@ function mapRow(r: Record<string, unknown>): ExpenseEntry {
     underWarranty: r.under_warranty as boolean,
   };
 }
+
+// ── localStorage layer ─────────────────────────────────────────────────────
+
+const key = (userId: string) => `truecost_expenses_${userId}`;
+
+const ls = {
+  getAll(userId: string, analysisId?: string): ExpenseEntry[] {
+    try {
+      const all: ExpenseEntry[] = JSON.parse(localStorage.getItem(key(userId)) ?? "[]");
+      return analysisId ? all.filter((e) => e.analysisId === analysisId) : all;
+    } catch { return []; }
+  },
+
+  add(userId: string, entry: Omit<ExpenseEntry, "id" | "userId" | "loggedAt">): ExpenseEntry {
+    const list = ls.getAll(userId);
+    const full: ExpenseEntry = {
+      ...entry,
+      id: crypto.randomUUID(),
+      userId,
+      loggedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(key(userId), JSON.stringify([full, ...list]));
+    return full;
+  },
+
+  remove(userId: string, id: string) {
+    localStorage.setItem(key(userId), JSON.stringify(ls.getAll(userId).filter((e) => e.id !== id)));
+  },
+};

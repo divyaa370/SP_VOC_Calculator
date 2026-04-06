@@ -1,4 +1,5 @@
 import { supabase } from "./supabaseClient";
+import { shouldUseSupabase, markTableAvailable } from "./persistence";
 import type { ItemFormData } from "../components/ItemEntryForm";
 
 export interface SavedAnalysis {
@@ -8,92 +9,100 @@ export interface SavedAnalysis {
   item: ItemFormData;
 }
 
+const TABLE = "saved_analyses";
+
 function makeLabel(item: ItemFormData): string {
-  if (item.category === "car") {
-    return `${item.year} ${item.make} ${item.model}`;
-  }
+  if (item.category === "car") return `${item.year} ${item.make} ${item.model}`;
   return `${(item as { breed: string }).breed} (${(item as { petType: string }).petType})`;
 }
 
-// ── Supabase-backed CRUD ───────────────────────────────────────────────────
+// ── Public API ─────────────────────────────────────────────────────────────
 
 export async function getSavedAnalyses(userId: string): Promise<SavedAnalysis[]> {
+  if (!(await shouldUseSupabase(TABLE))) return ls.getAll(userId);
+
   const { data, error } = await supabase
-    .from("saved_analyses")
+    .from(TABLE)
     .select("id, created_at, label, item")
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
-  if (error) {
-    console.warn("getSavedAnalyses fallback to localStorage:", error.message);
-    return getLocalAnalyses(userId);
-  }
+  if (error) return ls.getAll(userId);
 
-  return (data ?? []).map((r) => ({
-    id: r.id,
-    createdAt: r.created_at,
-    label: r.label,
-    item: r.item as ItemFormData,
-  }));
+  return (data ?? []).map(fromRow);
 }
 
 export async function saveAnalysis(userId: string, item: ItemFormData): Promise<SavedAnalysis> {
+  if (!(await shouldUseSupabase(TABLE))) return ls.save(userId, item);
+
   const label = makeLabel(item);
   const { data, error } = await supabase
-    .from("saved_analyses")
+    .from(TABLE)
     .insert({ user_id: userId, label, item })
     .select("id, created_at, label, item")
     .single();
 
-  if (error || !data) {
-    console.warn("saveAnalysis fallback to localStorage:", error?.message);
-    return saveLocalAnalysis(userId, item);
-  }
+  if (error || !data) return ls.save(userId, item);
 
-  return { id: data.id, createdAt: data.created_at, label: data.label, item: data.item as ItemFormData };
+  markTableAvailable(TABLE);
+  return fromRow(data);
 }
 
 export async function deleteAnalysis(userId: string, id: string): Promise<void> {
+  if (!(await shouldUseSupabase(TABLE))) { ls.remove(userId, id); return; }
+
   const { error } = await supabase
-    .from("saved_analyses")
+    .from(TABLE)
     .delete()
     .eq("id", id)
     .eq("user_id", userId);
 
-  if (error) {
-    console.warn("deleteAnalysis fallback to localStorage:", error.message);
-    deleteLocalAnalysis(userId, id);
-  }
+  if (error) ls.remove(userId, id);
 }
 
 export async function getAnalysisById(userId: string, id: string): Promise<SavedAnalysis | undefined> {
+  if (!(await shouldUseSupabase(TABLE))) return ls.getAll(userId).find((a) => a.id === id);
+
   const { data, error } = await supabase
-    .from("saved_analyses")
+    .from(TABLE)
     .select("id, created_at, label, item")
     .eq("id", id)
     .eq("user_id", userId)
     .single();
 
-  if (error || !data) return getLocalAnalyses(userId).find((a) => a.id === id);
-  return { id: data.id, createdAt: data.created_at, label: data.label, item: data.item as ItemFormData };
+  if (error || !data) return ls.getAll(userId).find((a) => a.id === id);
+  return fromRow(data);
 }
 
-// ── localStorage fallbacks ─────────────────────────────────────────────────
+// ── Row mapper ─────────────────────────────────────────────────────────────
 
-const lsKey = (userId: string) => `truecost_analyses_${userId}`;
-
-function getLocalAnalyses(userId: string): SavedAnalysis[] {
-  try { return JSON.parse(localStorage.getItem(lsKey(userId)) ?? "[]"); }
-  catch { return []; }
+function fromRow(r: { id: string; created_at: string; label: string; item: unknown }): SavedAnalysis {
+  return { id: r.id, createdAt: r.created_at, label: r.label, item: r.item as ItemFormData };
 }
 
-function saveLocalAnalysis(userId: string, item: ItemFormData): SavedAnalysis {
-  const list = getLocalAnalyses(userId);
-  const entry: SavedAnalysis = { id: crypto.randomUUID(), createdAt: new Date().toISOString(), label: makeLabel(item), item };
-  localStorage.setItem(lsKey(userId), JSON.stringify([entry, ...list]));
-  return entry;
-}
+// ── localStorage layer ─────────────────────────────────────────────────────
 
-function deleteLocalAnalysis(userId: string, id: string) {
-  localStorage.setItem(lsKey(userId), JSON.stringify(getLocalAnalyses(userId).filter((a) => a.id !== id)));
-}
+const key = (userId: string) => `truecost_analyses_${userId}`;
+
+const ls = {
+  getAll(userId: string): SavedAnalysis[] {
+    try { return JSON.parse(localStorage.getItem(key(userId)) ?? "[]"); }
+    catch { return []; }
+  },
+
+  save(userId: string, item: ItemFormData): SavedAnalysis {
+    const list = ls.getAll(userId);
+    const entry: SavedAnalysis = {
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      label: makeLabel(item),
+      item,
+    };
+    localStorage.setItem(key(userId), JSON.stringify([entry, ...list]));
+    return entry;
+  },
+
+  remove(userId: string, id: string) {
+    localStorage.setItem(key(userId), JSON.stringify(ls.getAll(userId).filter((a) => a.id !== id)));
+  },
+};
