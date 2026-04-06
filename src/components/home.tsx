@@ -4,9 +4,18 @@ import { useAuth } from "../context/AuthContext";
 import { ItemEntryForm, type ItemFormData } from "./ItemEntryForm";
 import { ResultsDashboard } from "./ResultsDashboard";
 
+const NAV_LINKS = [
+  { href: "/saved-analyses", label: "Saved" },
+  { href: "/expenses", label: "Expenses" },
+  { href: "/search-history", label: "History" },
+  { href: "/compare", label: "Compare" },
+  { href: "/app/settings", label: "Settings" },
+];
+
 function Home() {
   const { user } = useAuth();
   const [itemData, setItemData] = useState<ItemFormData | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // Pick up pre-fill from search history re-run
   useEffect(() => {
@@ -19,19 +28,42 @@ function Home() {
 
   return (
     <div className="w-screen min-h-screen flex flex-col">
-      <header className="flex items-center justify-between px-6 py-4 border-b">
+      <header className="flex items-center justify-between px-4 sm:px-6 py-4 border-b relative">
         <span className="font-semibold">TrueCost</span>
-        <div className="flex items-center gap-4">
-          <a href="/saved-analyses" className="text-sm text-muted-foreground hover:underline">Saved</a>
-          <a href="/expenses" className="text-sm text-muted-foreground hover:underline">Expenses</a>
-          <a href="/search-history" className="text-sm text-muted-foreground hover:underline">History</a>
-          <a href="/compare" className="text-sm text-muted-foreground hover:underline">Compare</a>
-          <a href="/app/settings" className="text-sm text-muted-foreground hover:underline">Settings</a>
+
+        {/* Desktop nav */}
+        <div className="hidden sm:flex items-center gap-4">
+          {NAV_LINKS.map((l) => (
+            <a key={l.href} href={l.href} className="text-sm text-muted-foreground hover:underline">{l.label}</a>
+          ))}
           <span className="text-sm text-muted-foreground">{user?.email}</span>
           <LogoutButton />
         </div>
+
+        {/* Mobile hamburger */}
+        <button
+          className="sm:hidden p-2 rounded-md hover:bg-accent"
+          onClick={() => setMenuOpen((o) => !o)}
+          aria-label="Toggle menu"
+        >
+          <div className="w-5 h-0.5 bg-foreground mb-1" />
+          <div className="w-5 h-0.5 bg-foreground mb-1" />
+          <div className="w-5 h-0.5 bg-foreground" />
+        </button>
+
+        {/* Mobile dropdown */}
+        {menuOpen && (
+          <div className="sm:hidden absolute top-full right-0 z-50 w-48 bg-background border rounded-md shadow-lg py-2">
+            {NAV_LINKS.map((l) => (
+              <a key={l.href} href={l.href} className="block px-4 py-2 text-sm hover:bg-accent">{l.label}</a>
+            ))}
+            <div className="border-t my-1" />
+            <div className="px-4 py-2 text-xs text-muted-foreground truncate">{user?.email}</div>
+            <div className="px-4 pb-2"><LogoutButton /></div>
+          </div>
+        )}
       </header>
-      <main className="flex-1 p-6 overflow-y-auto flex justify-center">
+      <main className="flex-1 p-4 sm:p-6 overflow-y-auto flex justify-center">
         {!itemData ? (
           <ItemEntryForm onSubmit={setItemData} />
         ) : (

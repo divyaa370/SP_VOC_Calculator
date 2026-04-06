@@ -7,6 +7,8 @@ import { Label } from "./ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { CAR_DATA, CAR_MAKES } from "../data/carData";
 import { getFuelPrice, DEFAULT_MPG } from "../lib/costConfig";
+import { decodeVin } from "../lib/vinLookup";
+import { getEpaMpg } from "../lib/epaData";
 import { useState } from "react";
 
 // ── US States ──────────────────────────────────────────────────────────────
@@ -101,6 +103,11 @@ interface ItemEntryFormProps {
 
 export function ItemEntryForm({ onSubmit, defaultValues }: ItemEntryFormProps) {
   const [section, setSection] = useState<"vehicle" | "financing" | "running">("vehicle");
+  const [vinInput, setVinInput] = useState("");
+  const [vinLoading, setVinLoading] = useState(false);
+  const [vinError, setVinError] = useState<string | null>(null);
+  const [epaLoading, setEpaLoading] = useState(false);
+  const [epaMpgInfo, setEpaMpgInfo] = useState<string | null>(null);
 
   const {
     register,
@@ -137,6 +144,37 @@ export function ItemEntryForm({ onSubmit, defaultValues }: ItemEntryFormProps) {
   const fuelType = watch("fuelType");
   const state = watch("state");
   const purchasePrice = watch("purchasePrice");
+
+  const handleVinLookup = async () => {
+    setVinLoading(true);
+    setVinError(null);
+    const result = await decodeVin(vinInput);
+    setVinLoading(false);
+    if (result.error) { setVinError(result.error); return; }
+    if (result.make) setValue("make", result.make);
+    if (result.model) setValue("model", result.model);
+    if (result.year) setValue("year", result.year);
+    setValue("fuelType", result.fuelType);
+    syncFuelPrice(result.fuelType);
+    setEpaMpgInfo(null);
+  };
+
+  const handleEpaLookup = async () => {
+    const make = watch("make");
+    const model = watch("model");
+    const year = watch("year");
+    if (!make || !model || !year) return;
+    setEpaLoading(true);
+    setEpaMpgInfo(null);
+    const result = await getEpaMpg(year, make, model);
+    setEpaLoading(false);
+    if (result) {
+      setValue("mpg", result.combined);
+      setEpaMpgInfo(`City ${result.city} / Hwy ${result.highway} / Combined ${result.combined}`);
+    } else {
+      setEpaMpgInfo("No EPA data found — enter manually.");
+    }
+  };
 
   // Auto-update fuel price when state or fuel type changes
   const syncFuelPrice = (newFuel?: string, newState?: string) => {
@@ -184,6 +222,30 @@ export function ItemEntryForm({ onSubmit, defaultValues }: ItemEntryFormProps) {
           {/* ── Vehicle section ── */}
           {section === "vehicle" && (
             <>
+              {/* VIN auto-fill */}
+              <div className="space-y-1">
+                <Label>VIN <span className="text-muted-foreground font-normal">(optional — auto-fills vehicle details)</span></Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={vinInput}
+                    onChange={(e) => { setVinInput(e.target.value.toUpperCase()); setVinError(null); }}
+                    placeholder="17-character VIN"
+                    maxLength={17}
+                    className="font-mono flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleVinLookup}
+                    disabled={vinInput.length !== 17 || vinLoading}
+                    className="whitespace-nowrap"
+                  >
+                    {vinLoading ? "Looking up…" : "Auto-fill"}
+                  </Button>
+                </div>
+                {vinError && <p className="text-xs text-destructive">{vinError}</p>}
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <Label>Make</Label>
@@ -276,7 +338,20 @@ export function ItemEntryForm({ onSubmit, defaultValues }: ItemEntryFormProps) {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <Label>{fuelType === "electric" ? "Efficiency (mi/kWh)" : "Fuel Economy (MPG)"}</Label>
-                  <Input type="number" step="0.1" {...register("mpg", { valueAsNumber: true })} />
+                  <div className="flex gap-2">
+                    <Input type="number" step="0.1" {...register("mpg", { valueAsNumber: true })} className="flex-1" />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleEpaLookup}
+                      disabled={epaLoading || !watch("make") || !watch("model")}
+                      className="whitespace-nowrap px-2 text-xs"
+                    >
+                      {epaLoading ? "…" : "EPA"}
+                    </Button>
+                  </div>
+                  {epaMpgInfo && <p className="text-xs text-muted-foreground">{epaMpgInfo}</p>}
                   <FieldError msg={carErrors.mpg?.message} />
                 </div>
                 <div className="space-y-1">

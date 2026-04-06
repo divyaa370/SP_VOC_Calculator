@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   BarChart, Bar, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -10,10 +10,10 @@ import { SustainabilityScore } from "./SustainabilityScore";
 import { RecommendationsPanel } from "./RecommendationsPanel";
 import {
   computeMonthlyLoanPayment,
-  estimateMaintenance,
   computeRemainingValue,
   getDepreciationSegment,
 } from "../lib/costConfig";
+import { getMonthlyMaintenance } from "../lib/maintenanceData";
 
 // ── Calculation engine ────────────────────────────────────────────────────
 
@@ -51,7 +51,7 @@ export function computeMonthlyCosts(item: ItemFormData): MonthlyCosts {
 
   const fuelMonthly = (car.annualMileage / car.mpg * car.fuelPricePerUnit) / 12;
 
-  const maintenanceMonthly = estimateMaintenance(car.year) / 12;
+  const maintenanceMonthly = getMonthlyMaintenance(car.make, car.year);
 
   // Depreciation: year-1 value drop spread monthly
   const segment = getDepreciationSegment(car.make, car.fuelType);
@@ -110,6 +110,45 @@ export function buildYearlyProjection(costs: MonthlyCosts, item: ItemFormData, y
   });
 }
 
+// ── Export helpers ────────────────────────────────────────────────────────
+
+function exportCsv(costs: MonthlyCosts, projectionData: ReturnType<typeof buildYearlyProjection>, label: string) {
+  const rows: string[] = [];
+  rows.push(`TrueCost Export — ${label}`);
+  rows.push("");
+  rows.push("Monthly Cost Breakdown");
+  rows.push("Category,Monthly Cost");
+  for (const [k, v] of Object.entries(costs)) {
+    rows.push(`"${k}",${v.toFixed(2)}`);
+  }
+  rows.push(`Total,${Object.values(costs).reduce((a, b) => a + b, 0).toFixed(2)}`);
+  rows.push("");
+  rows.push("Ownership Projection");
+  rows.push("Year,Cumulative Cost,Vehicle Value,Lease Equivalent");
+  for (const row of projectionData) {
+    rows.push(`"${row.year}",${row["Cumulative Cost"]},${row["Vehicle Value"]},${row["Lease Equivalent"]}`);
+  }
+  const blob = new Blob([rows.join("\n")], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `truecost_${label.replace(/\s+/g, "_")}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function exportPdf(element: HTMLElement, label: string) {
+  const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+    import("html2canvas"),
+    import("jspdf"),
+  ]);
+  const canvas = await html2canvas(element, { scale: 1.5, useCORS: true });
+  const imgData = canvas.toDataURL("image/png");
+  const pdf = new jsPDF({ orientation: "portrait", unit: "px", format: [canvas.width / 1.5, canvas.height / 1.5] });
+  pdf.addImage(imgData, "PNG", 0, 0, canvas.width / 1.5, canvas.height / 1.5);
+  pdf.save(`truecost_${label.replace(/\s+/g, "_")}.pdf`);
+}
+
 // ── Formatting ────────────────────────────────────────────────────────────
 
 const COLORS = ["#6366f1", "#06b6d4", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"];
@@ -141,6 +180,8 @@ interface CostDashboardProps {
 
 export function CostDashboard({ item, onReset }: CostDashboardProps) {
   const [projectionYears, setProjectionYears] = useState(5);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const dashboardRef = useRef<HTMLDivElement>(null);
 
   const costs = computeMonthlyCosts(item);
   const monthlyTotal = Object.values(costs).reduce((a, b) => a + b, 0);
@@ -159,17 +200,39 @@ export function CostDashboard({ item, onReset }: CostDashboardProps) {
     ? Math.max(0, costs["Loan Payment"] * car.loanTermMonths - car.loanAmount)
     : 0;
 
+  const handlePdfExport = async () => {
+    if (!dashboardRef.current) return;
+    setPdfLoading(true);
+    await exportPdf(dashboardRef.current, itemLabel);
+    setPdfLoading(false);
+  };
+
   return (
-    <div className="w-full max-w-4xl space-y-6">
+    <div ref={dashboardRef} className="w-full max-w-4xl space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold">Cost Analysis</h2>
           <p className="text-sm text-muted-foreground">{itemLabel}</p>
         </div>
-        <button onClick={onReset} className="text-sm underline text-muted-foreground">
-          Start over
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => exportCsv(costs, projectionData, itemLabel)}
+            className="text-xs border rounded px-2 py-1 text-muted-foreground hover:text-foreground hover:border-foreground transition-colors"
+          >
+            Export CSV
+          </button>
+          <button
+            onClick={handlePdfExport}
+            disabled={pdfLoading}
+            className="text-xs border rounded px-2 py-1 text-muted-foreground hover:text-foreground hover:border-foreground transition-colors disabled:opacity-50"
+          >
+            {pdfLoading ? "Generating…" : "Export PDF"}
+          </button>
+          <button onClick={onReset} className="text-sm underline text-muted-foreground">
+            Start over
+          </button>
+        </div>
       </div>
 
       {/* Summary cards */}
@@ -197,7 +260,7 @@ export function CostDashboard({ item, onReset }: CostDashboardProps) {
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="name" />
               <YAxis tickFormatter={(v) => `$${v}`} width={60} />
-              <Tooltip formatter={(v: number) => fmt(v)} />
+              <Tooltip formatter={(v) => typeof v === "number" ? fmt(v) : ""} />
               <Legend />
               {costKeys.map((key, i) => (
                 <Bar key={key} dataKey={key} stackId="a" fill={COLORS[i % COLORS.length]} />
@@ -229,7 +292,7 @@ export function CostDashboard({ item, onReset }: CostDashboardProps) {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="year" />
               <YAxis tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} width={55} />
-              <Tooltip formatter={(v: number) => fmt(v)} />
+              <Tooltip formatter={(v) => typeof v === "number" ? fmt(v) : ""} />
               <Legend />
               <Line type="monotone" dataKey="Cumulative Cost" stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} />
               {car && (

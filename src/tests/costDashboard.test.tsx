@@ -77,6 +77,30 @@ describe("computeMonthlyCosts – car", () => {
     const costs = computeMonthlyCosts(zeroCar);
     expect(costs.Fuel).toBeGreaterThanOrEqual(0);
   });
+
+  it("zero purchase price yields zero depreciation", () => {
+    const freeCar: ItemFormData = { ...carItem, purchasePrice: 0, loanAmount: 0 };
+    const costs = computeMonthlyCosts(freeCar);
+    expect(costs.Depreciation).toBe(0);
+  });
+
+  it("EV has zero fuel cost when mileage is zero", () => {
+    const ev: ItemFormData = { ...carItem, fuelType: "electric", mpg: 4, fuelPricePerUnit: 0.14, annualMileage: 0 };
+    const costs = computeMonthlyCosts(ev);
+    expect(costs.Fuel).toBe(0);
+  });
+
+  it("cash purchase (no loan) yields zero loan payment", () => {
+    const cashCar: ItemFormData = { ...carItem, loanAmount: 0, loanTermMonths: 0 };
+    const costs = computeMonthlyCosts(cashCar);
+    expect(costs["Loan Payment"]).toBe(0);
+  });
+
+  it("luxury make has higher maintenance than economy make at same year", () => {
+    const bmw: ItemFormData = { ...carItem, make: "BMW" };
+    const toyota: ItemFormData = { ...carItem, make: "Toyota" };
+    expect(computeMonthlyCosts(bmw).Maintenance).toBeGreaterThan(computeMonthlyCosts(toyota).Maintenance);
+  });
 });
 
 // ── buildYearlyProjection ─────────────────────────────────────────────────
