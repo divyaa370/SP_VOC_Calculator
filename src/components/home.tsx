@@ -26,12 +26,25 @@ function Home() {
     if (user?.id) setProfile(getUserProfile(user.id));
   }, [user?.id]);
 
-  // Pick up pre-fill from search history re-run
+  // Pick up pre-fill from search history re-run.
+  // Validate minimum shape before trusting the sessionStorage value — it could
+  // be tampered with or from a stale schema version.
   useEffect(() => {
     const raw = sessionStorage.getItem("truecost_prefill");
-    if (raw) {
-      try { setItemData(JSON.parse(raw)); } catch { /* ignore */ }
-      sessionStorage.removeItem("truecost_prefill");
+    sessionStorage.removeItem("truecost_prefill");
+    if (!raw) return;
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      if (
+        parsed !== null &&
+        typeof parsed === "object" &&
+        "category" in parsed &&
+        typeof (parsed as { category: unknown }).category === "string"
+      ) {
+        setItemData(parsed as ItemFormData);
+      }
+    } catch {
+      // Ignore corrupt or malformed prefill data.
     }
   }, []);
 

@@ -1,6 +1,17 @@
+import { z } from "zod";
 import { supabase } from "./supabaseClient";
 import { shouldUseSupabase, markTableAvailable } from "./persistence";
 import type { ItemFormData } from "../components/ItemEntryForm";
+
+// Minimal schema for validating localStorage entries after JSON.parse.
+// Uses passthrough so valid extra fields are preserved across schema changes.
+const savedAnalysisSchema = z.object({
+  id: z.string(),
+  createdAt: z.string(),
+  label: z.string(),
+  item: z.object({ category: z.string() }).passthrough(),
+});
+const savedAnalysesArraySchema = z.array(savedAnalysisSchema);
 
 export interface SavedAnalysis {
   id: string;
@@ -86,8 +97,18 @@ const key = (userId: string) => `truecost_analyses_${userId}`;
 
 const ls = {
   getAll(userId: string): SavedAnalysis[] {
-    try { return JSON.parse(localStorage.getItem(key(userId)) ?? "[]"); }
-    catch { return []; }
+    try {
+      const raw = JSON.parse(localStorage.getItem(key(userId)) ?? "[]");
+      const result = savedAnalysesArraySchema.safeParse(raw);
+      if (!result.success) {
+        // Corrupt/tampered data — clear and start fresh.
+        localStorage.removeItem(key(userId));
+        return [];
+      }
+      return result.data as SavedAnalysis[];
+    } catch {
+      return [];
+    }
   },
 
   save(userId: string, item: ItemFormData): SavedAnalysis {

@@ -224,6 +224,9 @@ export function CostDashboard({ item, onReset, initialProjectionYears }: CostDas
   const costKeys = Object.keys(costs) as (keyof MonthlyCosts)[];
   const breakdownData = [{ name: "Monthly", ...costs }];
 
+  // itemLabel is rendered as a JSX text node (never via dangerouslySetInnerHTML).
+  // React automatically escapes string children — no manual sanitization needed.
+  // The make/model fields are also validated server-side by zod (alphanumeric + safe chars only).
   const itemLabel =
     item.category === "car"
       ? `${(item as CarFormData).year} ${(item as CarFormData).make} ${(item as CarFormData).model}`

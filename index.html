@@ -2,7 +2,11 @@
 <html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.supabase.co" />
+    <!-- Content Security Policy
+         frame-ancestors must be set as an HTTP header (not supported in meta tags) — see vercel.json.
+         script-src includes api.tempolabs.ai for the Tempo dev-tools proxy script.
+         connect-src includes EIA (gas/electricity), EPA (MPG), and NHTSA (VIN) public APIs. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://api.tempolabs.ai; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.supabase.co https://api.eia.gov https://www.fueleconomy.gov https://vpic.nhtsa.dot.gov https://api.tempolabs.ai; img-src 'self' data:; base-uri 'self'; form-action 'self'" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Vite + React + TS</title>

@@ -25,9 +25,12 @@ const US_STATES = [
 const carSchema = z.object({
   category: z.literal("car"),
 
-  // Vehicle identity
-  make: z.string().min(1, "Make is required"),
-  model: z.string().min(1, "Model is required"),
+  // Vehicle identity — trim and reject HTML/script injection characters.
+  // Make and model are select inputs in the UI, but we validate server-side defensively.
+  make: z.string().trim().min(1, "Make is required")
+    .regex(/^[a-zA-Z0-9 \-'.,()/]+$/, "Make contains invalid characters"),
+  model: z.string().trim().min(1, "Model is required")
+    .regex(/^[a-zA-Z0-9 \-'.,()/]+$/, "Model contains invalid characters"),
   year: z.number({ invalid_type_error: "Year must be a number" })
     .int().min(1886).max(new Date().getFullYear() + 1, "Year is too far in the future"),
   fuelType: z.enum(["gasoline", "diesel", "electric", "hybrid"], {

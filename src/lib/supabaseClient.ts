@@ -1,15 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
+import { env } from "./env";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error(
-    "Missing Supabase env vars. Check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY."
-  );
-}
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+// env.ts validates at module load time with structured errors — no need to re-check here.
+export const supabase = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
