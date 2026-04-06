@@ -1,71 +1,124 @@
+import { useState } from "react";
 import {
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
+  BarChart, Bar, LineChart, Line,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import type { ItemFormData } from "./ItemEntryForm";
+import { Slider } from "./ui/slider";
+import type { ItemFormData, CarFormData } from "./ItemEntryForm";
 import { SustainabilityScore } from "./SustainabilityScore";
 import { RecommendationsPanel } from "./RecommendationsPanel";
+import {
+  computeMonthlyLoanPayment,
+  estimateMaintenance,
+  computeRemainingValue,
+  getDepreciationSegment,
+} from "../lib/costConfig";
 
-// ── Cost calculation helpers ───────────────────────────────────────────────
+// ── Calculation engine ────────────────────────────────────────────────────
 
-function computeMonthlyCosts(item: ItemFormData): Record<string, number> {
-  if (item.category === "car") {
-    const depreciation = (item.purchasePrice * 0.15) / 12;
-    const fuel =
-      item.fuelType === "electric"
-        ? (item.annualMileage / 12) * 0.04
-        : (item.annualMileage / 12 / 30) * 3.5;
-    const insurance = item.purchasePrice * 0.008;
-    const maintenance = (item.annualMileage * 0.08) / 12;
-    const other = item.monthlyExpenses;
-    return { Depreciation: depreciation, Fuel: fuel, Insurance: insurance, Maintenance: maintenance, Other: other };
-  } else {
-    const food = item.size === "small" ? 40 : item.size === "medium" ? 70 : 100;
-    const vet = item.size === "small" ? 30 : item.size === "medium" ? 50 : 70;
-    const grooming = item.petType === "dog" ? (item.size === "small" ? 30 : 50) : 20;
-    const supplies = 20;
-    const other = item.monthlyExpenses;
-    return { Food: food, Vet: vet, Grooming: grooming, Supplies: supplies, Other: other };
+export interface MonthlyCosts {
+  "Loan Payment": number;
+  Fuel: number;
+  Insurance: number;
+  Maintenance: number;
+  Registration: number;
+  Parking: number;
+  Depreciation: number;
+}
+
+export function computeMonthlyCosts(item: ItemFormData): MonthlyCosts {
+  if (item.category !== "car") {
+    // Legacy pet fallback
+    return {
+      "Loan Payment": 0,
+      Fuel: 0,
+      Insurance: 0,
+      Maintenance: (item.monthlyExpenses ?? 0) * 0.5,
+      Registration: 0,
+      Parking: 0,
+      Depreciation: (item.monthlyExpenses ?? 0) * 0.5,
+    };
   }
+
+  const car = item as CarFormData;
+
+  const loanPayment = computeMonthlyLoanPayment(
+    car.loanAmount,
+    car.loanInterestRate,
+    car.loanTermMonths
+  );
+
+  const fuelMonthly = (car.annualMileage / car.mpg * car.fuelPricePerUnit) / 12;
+
+  const maintenanceMonthly = estimateMaintenance(car.year) / 12;
+
+  // Depreciation: year-1 value drop spread monthly
+  const segment = getDepreciationSegment(car.make, car.fuelType);
+  const valueAfterYear1 = computeRemainingValue(car.purchasePrice, segment, 1);
+  const depreciationMonthly = (car.purchasePrice - valueAfterYear1) / 12;
+
+  return {
+    "Loan Payment": Math.round(loanPayment * 100) / 100,
+    Fuel: Math.round(fuelMonthly * 100) / 100,
+    Insurance: car.insuranceMonthly,
+    Maintenance: Math.round(maintenanceMonthly * 100) / 100,
+    Registration: Math.round((car.registrationAnnual / 12) * 100) / 100,
+    Parking: car.parkingMonthly,
+    Depreciation: Math.round(depreciationMonthly * 100) / 100,
+  };
 }
 
-function buildMonthlyBreakdown(costs: Record<string, number>) {
-  return [{ month: "Monthly", ...costs }];
+export function buildYearlyProjection(costs: MonthlyCosts, item: ItemFormData, years = 5) {
+  if (item.category !== "car") {
+    const monthly = Object.values(costs).reduce((a, b) => a + b, 0);
+    return Array.from({ length: years }, (_, i) => ({
+      year: `Yr ${i + 1}`,
+      "Cumulative Cost": Math.round(monthly * 12 * (i + 1)),
+      "Vehicle Value": 0,
+      "Lease Equivalent": 0,
+    }));
+  }
+
+  const car = item as CarFormData;
+  const segment = getDepreciationSegment(car.make, car.fuelType);
+
+  // Monthly running costs excluding loan (loan is amortized separately)
+  const monthlyRunning =
+    costs.Fuel + costs.Insurance + costs.Maintenance + costs.Registration + costs.Parking;
+
+  // Total loan interest over full term
+  const totalLoanPaid = costs["Loan Payment"] * car.loanTermMonths;
+  const totalInterest = totalLoanPaid - car.loanAmount;
+
+  // Lease equivalent: ~1% of MSRP/month is a common rule of thumb
+  const leaseMonthly = car.purchasePrice * 0.012;
+
+  let cumulativeCost = car.downPayment;
+
+  return Array.from({ length: years }, (_, i) => {
+    const yr = i + 1;
+    const loanPaidThisYear = Math.min(costs["Loan Payment"] * 12, Math.max(0, totalLoanPaid - costs["Loan Payment"] * 12 * i));
+    cumulativeCost += monthlyRunning * 12 + loanPaidThisYear;
+
+    return {
+      year: `Yr ${yr}`,
+      "Cumulative Cost": Math.round(cumulativeCost),
+      "Vehicle Value": Math.round(computeRemainingValue(car.purchasePrice, segment, yr)),
+      "Lease Equivalent": Math.round(leaseMonthly * 12 * yr),
+    };
+  });
 }
 
-function buildYearlyProjection(costs: Record<string, number>, years = 5) {
-  const monthlyTotal = Object.values(costs).reduce((a, b) => a + b, 0);
-  return Array.from({ length: years }, (_, i) => ({
-    year: `Year ${i + 1}`,
-    "Cumulative Cost": Math.round(monthlyTotal * 12 * (i + 1)),
-    "Annual Cost": Math.round(monthlyTotal * 12),
-  }));
+// ── Formatting ────────────────────────────────────────────────────────────
+
+const COLORS = ["#6366f1", "#06b6d4", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"];
+
+function fmt(v: number) {
+  return `$${Math.round(v).toLocaleString("en-US")}`;
 }
 
-// ── Components ────────────────────────────────────────────────────────────
-
-const CHART_COLORS = ["#6366f1", "#06b6d4", "#10b981", "#f59e0b", "#ef4444"];
-
-function formatCurrency(value: number) {
-  return `$${value.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-}
-
-interface SummaryCardProps {
-  title: string;
-  value: string;
-  sub?: string;
-}
-
-function SummaryCard({ title, value, sub }: SummaryCardProps) {
+function SummaryCard({ title, value, sub }: { title: string; value: string; sub?: string }) {
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -79,7 +132,7 @@ function SummaryCard({ title, value, sub }: SummaryCardProps) {
   );
 }
 
-// ── Main Dashboard ─────────────────────────────────────────────────────────
+// ── Main Dashboard ────────────────────────────────────────────────────────
 
 interface CostDashboardProps {
   item: ItemFormData;
@@ -87,18 +140,24 @@ interface CostDashboardProps {
 }
 
 export function CostDashboard({ item, onReset }: CostDashboardProps) {
+  const [projectionYears, setProjectionYears] = useState(5);
+
   const costs = computeMonthlyCosts(item);
   const monthlyTotal = Object.values(costs).reduce((a, b) => a + b, 0);
   const yearlyTotal = monthlyTotal * 12;
-  const fiveYearTotal = yearlyTotal * 5;
-  const breakdownData = buildMonthlyBreakdown(costs);
-  const projectionData = buildYearlyProjection(costs);
-  const costKeys = Object.keys(costs);
+  const projectionData = buildYearlyProjection(costs, item, projectionYears);
+  const costKeys = Object.keys(costs) as (keyof MonthlyCosts)[];
+  const breakdownData = [{ name: "Monthly", ...costs }];
 
   const itemLabel =
     item.category === "car"
-      ? `${item.year} ${item.make} ${item.model}`
-      : `${item.breed} (${item.petType})`;
+      ? `${(item as CarFormData).year} ${(item as CarFormData).make} ${(item as CarFormData).model}`
+      : `${(item as { breed: string; petType: string }).breed} (${(item as { petType: string }).petType})`;
+
+  const car = item.category === "car" ? (item as CarFormData) : null;
+  const totalInterest = car
+    ? Math.max(0, costs["Loan Payment"] * car.loanTermMonths - car.loanAmount)
+    : 0;
 
   return (
     <div className="w-full max-w-4xl space-y-6">
@@ -108,31 +167,23 @@ export function CostDashboard({ item, onReset }: CostDashboardProps) {
           <h2 className="text-xl font-semibold">Cost Analysis</h2>
           <p className="text-sm text-muted-foreground">{itemLabel}</p>
         </div>
-        <button
-          onClick={onReset}
-          className="text-sm underline text-muted-foreground"
-        >
+        <button onClick={onReset} className="text-sm underline text-muted-foreground">
           Start over
         </button>
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-4" data-testid="summary-cards">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3" data-testid="summary-cards">
+        <SummaryCard title="Monthly Cost" value={fmt(monthlyTotal)} sub="all-in estimate" />
+        <SummaryCard title="Annual Cost" value={fmt(yearlyTotal)} sub="12-month projection" />
         <SummaryCard
-          title="Monthly Cost"
-          value={formatCurrency(monthlyTotal)}
-          sub="estimated total"
+          title={`${projectionYears}-Year Total`}
+          value={fmt(projectionData[projectionYears - 1]?.["Cumulative Cost"] ?? yearlyTotal * projectionYears)}
+          sub="cumulative ownership"
         />
-        <SummaryCard
-          title="Annual Cost"
-          value={formatCurrency(yearlyTotal)}
-          sub="12-month projection"
-        />
-        <SummaryCard
-          title="5-Year Cost"
-          value={formatCurrency(fiveYearTotal)}
-          sub="long-term projection"
-        />
+        {totalInterest > 0 && (
+          <SummaryCard title="Total Interest" value={fmt(totalInterest)} sub={`over ${car?.loanTermMonths}mo loan`} />
+        )}
       </div>
 
       {/* Monthly breakdown bar chart */}
@@ -141,51 +192,60 @@ export function CostDashboard({ item, onReset }: CostDashboardProps) {
           <CardTitle className="text-base">Monthly Cost Breakdown</CardTitle>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={260}>
+          <ResponsiveContainer width="100%" height={280}>
             <BarChart data={breakdownData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="month" />
-              <YAxis tickFormatter={(v) => `$${v}`} />
-              <Tooltip formatter={(value: number) => formatCurrency(value)} />
+              <XAxis dataKey="name" />
+              <YAxis tickFormatter={(v) => `$${v}`} width={60} />
+              <Tooltip formatter={(v: number) => fmt(v)} />
               <Legend />
               {costKeys.map((key, i) => (
-                <Bar key={key} dataKey={key} stackId="a" fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                <Bar key={key} dataKey={key} stackId="a" fill={COLORS[i % COLORS.length]} />
               ))}
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>
 
-      {/* 5-year projection line chart */}
+      {/* Projection chart with slider */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">5-Year Cost Projection</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="text-base">Ownership Cost Projection</CardTitle>
+          <div className="flex items-center gap-3 w-48">
+            <span className="text-xs text-muted-foreground whitespace-nowrap">{projectionYears} yr</span>
+            <Slider
+              min={1}
+              max={15}
+              step={1}
+              value={[projectionYears]}
+              onValueChange={([v]) => setProjectionYears(v)}
+              className="w-full"
+            />
+          </div>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={260}>
+          <ResponsiveContainer width="100%" height={280}>
             <LineChart data={projectionData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="year" />
-              <YAxis tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-              <Tooltip formatter={(value: number) => formatCurrency(value)} />
+              <YAxis tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} width={55} />
+              <Tooltip formatter={(v: number) => fmt(v)} />
               <Legend />
-              <Line
-                type="monotone"
-                dataKey="Cumulative Cost"
-                stroke="#6366f1"
-                strokeWidth={2}
-                dot={{ r: 4 }}
-              />
-              <Line
-                type="monotone"
-                dataKey="Annual Cost"
-                stroke="#06b6d4"
-                strokeWidth={2}
-                strokeDasharray="5 5"
-                dot={false}
-              />
+              <Line type="monotone" dataKey="Cumulative Cost" stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} />
+              {car && (
+                <Line type="monotone" dataKey="Vehicle Value" stroke="#10b981" strokeWidth={2} strokeDasharray="4 4" dot={false} />
+              )}
+              {car && (
+                <Line type="monotone" dataKey="Lease Equivalent" stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="2 3" dot={false} />
+              )}
             </LineChart>
           </ResponsiveContainer>
+          {car && (
+            <p className="text-xs text-muted-foreground mt-2">
+              Dashed green = estimated resale value. Orange = cumulative lease cost (~1.2% MSRP/month).
+              Where ownership line crosses lease line is your break-even point.
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -199,4 +259,4 @@ export function CostDashboard({ item, onReset }: CostDashboardProps) {
 }
 
 // Export helpers for testing
-export { computeMonthlyCosts, buildYearlyProjection };
+export { computeMonthlyCosts as computeMonthlyCostsLegacy };

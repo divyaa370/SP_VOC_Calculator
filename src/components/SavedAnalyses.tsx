@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
-import type { SavedAnalysis } from "../services/analysisService";
+import type { SavedAnalysis } from "../lib/savedAnalyses";
 import type { ItemFormData } from "./ItemEntryForm";
 
 function itemLabel(item: ItemFormData): string {

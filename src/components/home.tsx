@@ -23,6 +23,7 @@ function Home() {
         <span className="font-semibold">TrueCost</span>
         <div className="flex items-center gap-4">
           <a href="/saved-analyses" className="text-sm text-muted-foreground hover:underline">Saved</a>
+          <a href="/expenses" className="text-sm text-muted-foreground hover:underline">Expenses</a>
           <a href="/search-history" className="text-sm text-muted-foreground hover:underline">History</a>
           <a href="/compare" className="text-sm text-muted-foreground hover:underline">Compare</a>
           <a href="/app/settings" className="text-sm text-muted-foreground hover:underline">Settings</a>

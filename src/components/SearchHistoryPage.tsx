@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { SearchHistory } from "./SearchHistory";
@@ -15,19 +15,21 @@ export function SearchHistoryPage() {
   const navigate = useNavigate();
   const userId = user?.id ?? "";
 
-  const [entries, setEntries] = useState<SearchHistoryEntry[]>(() =>
-    getSearchHistory(userId)
-  );
+  const [entries, setEntries] = useState<SearchHistoryEntry[]>([]);
 
-  const refresh = useCallback(() => setEntries(getSearchHistory(userId)), [userId]);
+  const refresh = useCallback(async () => {
+    setEntries(await getSearchHistory(userId));
+  }, [userId]);
 
-  const handleDelete = (id: string) => {
-    deleteSearchHistoryEntry(userId, id);
+  useEffect(() => { refresh(); }, [refresh]);
+
+  const handleDelete = async (id: string) => {
+    await deleteSearchHistoryEntry(userId, id);
     refresh();
   };
 
-  const handleClear = () => {
-    clearSearchHistory(userId);
+  const handleClear = async () => {
+    await clearSearchHistory(userId);
     refresh();
   };
 

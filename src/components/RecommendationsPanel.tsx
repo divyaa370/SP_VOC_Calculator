@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import type { ItemFormData } from "./ItemEntryForm";
+import type { ItemFormData, CarFormData } from "./ItemEntryForm";
 
 interface Alert {
   type: "warning" | "info";
@@ -11,66 +11,42 @@ export function buildRecommendations(item: ItemFormData, monthlyTotal: number): 
   const annualCost = monthlyTotal * 12;
 
   if (item.category === "car") {
+    const car = item as CarFormData;
+
     if (annualCost > 12000) {
-      alerts.push({
-        type: "warning",
-        message: `Annual cost exceeds $12,000. Review your budget to ensure this is sustainable.`,
-      });
+      alerts.push({ type: "warning", message: `Annual ownership cost exceeds $12,000. Review your budget to ensure this is sustainable.` });
     }
-    if (item.purchasePrice > 40000) {
-      alerts.push({
-        type: "warning",
-        message: "High purchase price means steep depreciation. Expect to lose significant value in the first 3 years.",
-      });
+    if (car.purchasePrice > 40000) {
+      alerts.push({ type: "warning", message: "High purchase price means steep depreciation. Expect to lose significant value in the first 3 years." });
     }
-    if (item.fuelType === "gasoline" && item.annualMileage > 15000) {
-      alerts.push({
-        type: "warning",
-        message: "High mileage on a gasoline vehicle significantly increases fuel costs and emissions.",
-      });
+    if (car.loanInterestRate > 8) {
+      alerts.push({ type: "warning", message: `Your interest rate of ${car.loanInterestRate}% APR is above average. Consider refinancing if your credit score has improved since purchase.` });
     }
-    if (item.fuelType === "gasoline" || item.fuelType === "diesel") {
-      alerts.push({
-        type: "info",
-        message: "Switching to a hybrid or electric vehicle could reduce your annual fuel costs by 40–60%.",
-      });
+    if (car.fuelType === "gasoline" && car.annualMileage > 15000) {
+      alerts.push({ type: "warning", message: "High mileage on a gasoline vehicle significantly increases fuel costs and emissions." });
     }
-    if (item.annualMileage > 15000) {
-      alerts.push({
-        type: "info",
-        message: "Reducing annual mileage through carpooling or remote work days could lower both fuel and maintenance costs.",
-      });
+    if (car.fuelType === "gasoline" || car.fuelType === "diesel") {
+      alerts.push({ type: "info", message: "Switching to a hybrid or electric vehicle could reduce your annual fuel costs by 40–60%." });
     }
-    if (item.monthlyExpenses < 100 && item.fuelType !== "electric") {
-      alerts.push({
-        type: "info",
-        message: "Your monthly expenses look low. Ensure your budget includes routine maintenance (oil changes, tires, etc.).",
-      });
+    if (car.annualMileage > 15000) {
+      alerts.push({ type: "info", message: "Reducing annual mileage through carpooling or remote work could lower fuel and maintenance costs." });
+    }
+    if ((car.insuranceMonthly ?? 0) < 50) {
+      alerts.push({ type: "info", message: "Insurance looks low. Ensure you have adequate coverage — comprehensive and collision are recommended for financed vehicles." });
+    }
+    if (car.loanTermMonths >= 72) {
+      alerts.push({ type: "warning", message: "Loan terms over 6 years mean you may owe more than the car is worth (negative equity). Consider a shorter term if possible." });
     }
   } else {
     if (annualCost > 5000) {
-      alerts.push({
-        type: "warning",
-        message: `Annual cost exceeds $5,000. Pet ownership at this level is a significant financial commitment.`,
-      });
+      alerts.push({ type: "warning", message: `Annual cost exceeds $5,000. Pet ownership at this level is a significant financial commitment.` });
     }
-    if (item.size === "large" && item.petType === "dog") {
-      alerts.push({
-        type: "info",
-        message: "Large dogs have higher vet and food costs. Consider pet insurance to manage unexpected expenses.",
-      });
+    const pet = item as { size?: string; petType?: string; monthlyExpenses?: number };
+    if (pet.size === "large" && pet.petType === "dog") {
+      alerts.push({ type: "info", message: "Large dogs have higher vet and food costs. Consider pet insurance to manage unexpected expenses." });
     }
-    if (item.petType === "dog" || item.petType === "cat") {
-      alerts.push({
-        type: "info",
-        message: "Preventive vet visits and vaccinations are cheaper than emergency care. Budget at least $300/year for routine checkups.",
-      });
-    }
-    if (item.monthlyExpenses < 50) {
-      alerts.push({
-        type: "info",
-        message: "Your monthly expenses look low. Ensure your budget covers food, grooming, and routine vet care.",
-      });
+    if (pet.petType === "dog" || pet.petType === "cat") {
+      alerts.push({ type: "info", message: "Preventive vet visits and vaccinations are cheaper than emergency care. Budget at least $300/year for routine checkups." });
     }
   }
 

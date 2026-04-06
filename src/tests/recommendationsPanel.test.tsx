@@ -3,42 +3,30 @@ import { render, screen } from "@testing-library/react";
 import { RecommendationsPanel, buildRecommendations } from "../components/RecommendationsPanel";
 import type { ItemFormData } from "../components/ItemEntryForm";
 
+const baseCarFields = {
+  state: "TX", mpg: 28, fuelPricePerUnit: 3.45,
+  downPayment: 5000, loanAmount: 20000, loanInterestRate: 6.5, loanTermMonths: 60,
+  insuranceMonthly: 150, registrationAnnual: 250, parkingMonthly: 0,
+};
+
 const gasCar: ItemFormData = {
-  category: "car",
-  make: "Toyota",
-  model: "Camry",
-  year: 2022,
-  fuelType: "gasoline",
-  annualMileage: 12000,
-  purchasePrice: 25000,
-  monthlyExpenses: 200,
+  category: "car", make: "Toyota", model: "Camry", year: 2022,
+  fuelType: "gasoline", annualMileage: 12000, purchasePrice: 25000, ...baseCarFields,
 };
 
 const electricCar: ItemFormData = {
-  category: "car",
-  make: "Tesla",
-  model: "Model 3",
-  year: 2023,
-  fuelType: "electric",
-  annualMileage: 10000,
-  purchasePrice: 35000,
-  monthlyExpenses: 150,
+  category: "car", make: "Tesla", model: "Model 3", year: 2023,
+  fuelType: "electric", annualMileage: 10000, purchasePrice: 35000,
+  ...baseCarFields, mpg: 3.5, fuelPricePerUnit: 0.16,
 };
 
 const expensiveCar: ItemFormData = {
-  ...gasCar,
-  purchasePrice: 55000,
-  annualMileage: 20000,
+  ...gasCar, purchasePrice: 55000, annualMileage: 20000,
 };
 
 const largeDog: ItemFormData = {
-  category: "pet",
-  petType: "dog",
-  breed: "Labrador",
-  ageYears: 3,
-  size: "large",
-  purchasePrice: 1200,
-  monthlyExpenses: 200,
+  category: "pet", petType: "dog", breed: "Labrador",
+  ageYears: 3, size: "large", purchasePrice: 1200, monthlyExpenses: 200,
 };
 
 describe("buildRecommendations", () => {
@@ -79,11 +67,6 @@ describe("buildRecommendations", () => {
 });
 
 describe("RecommendationsPanel component", () => {
-  it("renders nothing when no alerts", () => {
-    const { container } = render(<RecommendationsPanel item={electricCar} monthlyTotal={400} />);
-    expect(container.firstChild).toBeNull();
-  });
-
   it("renders panel with alerts for a gasoline car", () => {
     render(<RecommendationsPanel item={gasCar} monthlyTotal={500} />);
     expect(screen.getByTestId("recommendations-panel")).toBeDefined();

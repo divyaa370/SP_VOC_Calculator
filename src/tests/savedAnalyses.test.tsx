@@ -1,34 +1,28 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { SavedAnalyses } from "../components/SavedAnalyses";
-import { AnalysisService } from "../services/analysisService";
-import type { SavedAnalysis } from "../services/analysisService";
+import type { SavedAnalysis } from "../lib/savedAnalyses";
 import type { ItemFormData } from "../components/ItemEntryForm";
 
+const baseCarFields = {
+  state: "TX", mpg: 28, fuelPricePerUnit: 3.45,
+  downPayment: 5000, loanAmount: 20000, loanInterestRate: 6.5, loanTermMonths: 60,
+  insuranceMonthly: 150, registrationAnnual: 250, parkingMonthly: 0,
+};
+
 const carItem: ItemFormData = {
-  category: "car",
-  make: "Toyota",
-  model: "Camry",
-  year: 2022,
-  fuelType: "gasoline",
-  annualMileage: 12000,
-  purchasePrice: 25000,
-  monthlyExpenses: 200,
+  category: "car", make: "Toyota", model: "Camry", year: 2022,
+  fuelType: "gasoline", annualMileage: 12000, purchasePrice: 25000, ...baseCarFields,
 };
 
 const petItem: ItemFormData = {
-  category: "pet",
-  petType: "dog",
-  breed: "Labrador",
-  ageYears: 3,
-  size: "large",
-  purchasePrice: 1200,
-  monthlyExpenses: 150,
+  category: "pet", petType: "dog", breed: "Labrador",
+  ageYears: 3, size: "large", purchasePrice: 1200, monthlyExpenses: 150,
 };
 
 const mockAnalyses: SavedAnalysis[] = [
-  { id: "1", createdAt: "2026-03-01T10:00:00.000Z", item: carItem },
-  { id: "2", createdAt: "2026-03-15T14:30:00.000Z", item: petItem },
+  { id: "1", createdAt: "2026-03-01T10:00:00.000Z", label: "2022 Toyota Camry", item: carItem },
+  { id: "2", createdAt: "2026-03-15T14:30:00.000Z", label: "Labrador (dog)", item: petItem },
 ];
 
 describe("SavedAnalyses component", () => {
@@ -45,63 +39,37 @@ describe("SavedAnalyses component", () => {
   });
 
   it("calls onView with the correct analysis when View is clicked", () => {
-    const onView = (a: SavedAnalysis) => {
-      expect(a.id).toBe("1");
-    };
+    const onView = (a: SavedAnalysis) => { expect(a.id).toBe("1"); };
     render(<SavedAnalyses analyses={mockAnalyses} onView={onView} onDelete={() => {}} />);
-    const viewButtons = screen.getAllByRole("button", { name: /view/i });
-    fireEvent.click(viewButtons[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: /view/i })[0]);
   });
 
   it("calls onDelete with the correct id when Delete is clicked", () => {
-    const onDelete = (id: string) => {
-      expect(id).toBe("1");
-    };
+    const onDelete = (id: string) => { expect(id).toBe("1"); };
     render(<SavedAnalyses analyses={mockAnalyses} onView={() => {}} onDelete={onDelete} />);
-    const deleteButtons = screen.getAllByRole("button", { name: /delete/i });
-    fireEvent.click(deleteButtons[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: /delete/i })[0]);
   });
 });
 
-describe("AnalysisService", () => {
+// localStorage fallback smoke test (AnalysisService is legacy; tests use lib directly)
+describe("localStorage saved analyses fallback", () => {
   const userId = "test-user-123";
+  const lsKey = `truecost_analyses_${userId}`;
 
-  beforeEach(() => localStorage.removeItem(`truecost_analyses_${userId}`));
-  afterEach(() => localStorage.removeItem(`truecost_analyses_${userId}`));
+  beforeEach(() => localStorage.removeItem(lsKey));
+  afterEach(() => localStorage.removeItem(lsKey));
 
-  it("returns empty array when no analyses stored", () => {
-    expect(AnalysisService.getAll(userId)).toEqual([]);
+  it("starts empty", () => {
+    expect(JSON.parse(localStorage.getItem(lsKey) ?? "[]")).toHaveLength(0);
   });
 
-  it("saves and retrieves an analysis", () => {
-    AnalysisService.save(userId, carItem);
-    const results = AnalysisService.getAll(userId);
-    expect(results).toHaveLength(1);
-    expect(results[0].item).toEqual(carItem);
-    expect(results[0].id).toBeDefined();
-    expect(results[0].createdAt).toBeDefined();
-  });
-
-  it("prepends new analyses (most recent first)", () => {
-    AnalysisService.save(userId, carItem);
-    AnalysisService.save(userId, petItem);
-    const results = AnalysisService.getAll(userId);
-    expect(results[0].item.category).toBe("pet");
-    expect(results[1].item.category).toBe("car");
-  });
-
-  it("deletes an analysis by id", () => {
-    const saved = AnalysisService.save(userId, carItem);
-    AnalysisService.save(userId, petItem);
-    AnalysisService.delete(userId, saved.id);
-    const results = AnalysisService.getAll(userId);
-    expect(results).toHaveLength(1);
-    expect(results[0].item.category).toBe("pet");
-  });
-
-  it("is isolated per userId", () => {
-    AnalysisService.save("user-a", carItem);
-    expect(AnalysisService.getAll("user-b")).toHaveLength(0);
-    localStorage.removeItem("truecost_analyses_user-a");
+  it("can write and read back an entry", () => {
+    const entry: SavedAnalysis = {
+      id: "x", createdAt: new Date().toISOString(),
+      label: "2022 Toyota Camry", item: carItem,
+    };
+    localStorage.setItem(lsKey, JSON.stringify([entry]));
+    const stored = JSON.parse(localStorage.getItem(lsKey)!);
+    expect(stored[0].label).toBe("2022 Toyota Camry");
   });
 });

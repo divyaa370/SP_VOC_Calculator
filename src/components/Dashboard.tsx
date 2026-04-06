@@ -1,11 +1,11 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { LogoutButton } from "./auth/LogoutButton";
 import { ItemEntryForm, type ItemFormData } from "./ItemEntryForm";
 import { CostDashboard } from "./CostDashboard";
 import { SavedAnalyses } from "./SavedAnalyses";
-import { AnalysisService, type SavedAnalysis } from "../services/analysisService";
+import { getSavedAnalyses, saveAnalysis, deleteAnalysis, type SavedAnalysis } from "../lib/savedAnalyses";
 import { Button } from "./ui/button";
 
 type Tab = "new" | "saved";
@@ -16,25 +16,25 @@ export function Dashboard() {
 
   const [tab, setTab] = useState<Tab>("new");
   const [itemData, setItemData] = useState<ItemFormData | null>(null);
-  const [analyses, setAnalyses] = useState<SavedAnalysis[]>(() =>
-    AnalysisService.getAll(userId)
-  );
+  const [analyses, setAnalyses] = useState<SavedAnalysis[]>([]);
   const [savedConfirm, setSavedConfirm] = useState(false);
 
-  const refreshAnalyses = useCallback(() => {
-    setAnalyses(AnalysisService.getAll(userId));
+  const refreshAnalyses = useCallback(async () => {
+    setAnalyses(await getSavedAnalyses(userId));
   }, [userId]);
 
-  const handleSave = () => {
+  useEffect(() => { refreshAnalyses(); }, [refreshAnalyses]);
+
+  const handleSave = async () => {
     if (!itemData) return;
-    AnalysisService.save(userId, itemData);
+    await saveAnalysis(userId, itemData);
     refreshAnalyses();
     setSavedConfirm(true);
     setTimeout(() => setSavedConfirm(false), 2500);
   };
 
-  const handleDelete = (id: string) => {
-    AnalysisService.delete(userId, id);
+  const handleDelete = async (id: string) => {
+    await deleteAnalysis(userId, id);
     refreshAnalyses();
   };
 

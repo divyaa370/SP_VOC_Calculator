@@ -1,4 +1,4 @@
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useCallback } from "react";
 import { useRoutes, Routes, Route, Navigate } from "react-router-dom";
 import { SignInForm } from "./components/auth/SignInForm";
 import { SignUpForm } from "./components/auth/SignUpForm";
@@ -10,6 +10,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ComparisonMode } from "./components/ComparisonMode";
 import { SavedAnalysisDetail } from "./components/SavedAnalysisDetail";
 import { SearchHistoryPage } from "./components/SearchHistoryPage";
+import { ExpenseLogPage } from "./components/ExpenseLogPage";
 import { LogoutButton } from "./components/auth/LogoutButton";
 import { ItemEntryForm, type ItemFormData } from "./components/ItemEntryForm";
 import { ResultsDashboard } from "./components/ResultsDashboard";
@@ -39,6 +40,7 @@ function HomePage() {
         <span className="font-semibold">TrueCost</span>
         <div className="flex items-center gap-4">
           <a href="/saved-analyses" className="text-sm text-muted-foreground hover:underline">Saved</a>
+          <a href="/expenses" className="text-sm text-muted-foreground hover:underline">Expenses</a>
           <a href="/search-history" className="text-sm text-muted-foreground hover:underline">History</a>
           <a href="/compare" className="text-sm text-muted-foreground hover:underline">Compare</a>
           <a href="/app/settings" className="text-sm text-muted-foreground hover:underline">Settings</a>
@@ -61,11 +63,13 @@ function HomePage() {
 
 function SavedAnalysesPage() {
   const { user } = useAuth();
-  const [analyses, setAnalyses] = useState<SavedAnalysis[]>(() =>
-    getSavedAnalyses(user?.id ?? "")
-  );
+  const [analyses, setAnalyses] = useState<SavedAnalysis[]>([]);
 
-  const refresh = () => setAnalyses(getSavedAnalyses(user?.id ?? ""));
+  const refresh = useCallback(async () => {
+    setAnalyses(await getSavedAnalyses(user?.id ?? ""));
+  }, [user?.id]);
+
+  useEffect(() => { refresh(); }, [refresh]);
 
   return (
     <div className="w-screen min-h-screen flex flex-col">
@@ -136,6 +140,7 @@ function App() {
             <Route path="/saved-analyses" element={<ProtectedRoute><SavedAnalysesPage /></ProtectedRoute>} />
             <Route path="/saved-analyses/:id" element={<ProtectedRoute><SavedAnalysisDetail /></ProtectedRoute>} />
             <Route path="/search-history" element={<ProtectedRoute><SearchHistoryPage /></ProtectedRoute>} />
+            <Route path="/expenses" element={<ProtectedRoute><ExpenseLogPage /></ProtectedRoute>} />
 
             {/* Legacy /app redirect */}
             <Route path="/app" element={<Navigate to="/" replace />} />
