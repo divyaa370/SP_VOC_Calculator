@@ -8,6 +8,22 @@ export interface UserProfile {
   email: string;
   displayName?: string;
   avatarUrl?: string;
+  // Identity
+  annualIncome?: number;
+  // Commute
+  homeAddress?: string;
+  workAddress?: string;
+  commuteDaysPerWeek?: number;
+  oneWayCommuteMiles?: number;
+  // Fuel & driving
+  preferredFuelPrice?: number;
+  electricityRate?: number;
+  drivingStyle?: "city" | "mixed" | "highway";
+  // Insurance
+  monthlyInsurancePremium?: number;
+  stateOfRegistration?: string;
+  // Vehicle defaults
+  ownershipHorizonYears?: number;
 }
 
 export async function getCurrentUser(): Promise<UserProfile | null> {

@@ -10,9 +10,10 @@ import { useState, useEffect } from "react";
 interface ResultsDashboardProps {
   item: ItemFormData;
   onReset: () => void;
+  initialProjectionYears?: number;
 }
 
-export function ResultsDashboard({ item, onReset }: ResultsDashboardProps) {
+export function ResultsDashboard({ item, onReset, initialProjectionYears }: ResultsDashboardProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [savedConfirm, setSavedConfirm] = useState(false);
@@ -44,7 +45,7 @@ export function ResultsDashboard({ item, onReset }: ResultsDashboardProps) {
           Compare
         </Button>
       </div>
-      <CostDashboard item={item} onReset={onReset} />
+      <CostDashboard item={item} onReset={onReset} initialProjectionYears={initialProjectionYears} />
     </div>
   );
 }

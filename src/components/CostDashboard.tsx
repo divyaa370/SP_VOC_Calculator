@@ -176,10 +176,11 @@ function SummaryCard({ title, value, sub }: { title: string; value: string; sub?
 interface CostDashboardProps {
   item: ItemFormData;
   onReset: () => void;
+  initialProjectionYears?: number;
 }
 
-export function CostDashboard({ item, onReset }: CostDashboardProps) {
-  const [projectionYears, setProjectionYears] = useState(5);
+export function CostDashboard({ item, onReset, initialProjectionYears }: CostDashboardProps) {
+  const [projectionYears, setProjectionYears] = useState(initialProjectionYears ?? 5);
   const [pdfLoading, setPdfLoading] = useState(false);
   const dashboardRef = useRef<HTMLDivElement>(null);
 

@@ -6,6 +6,8 @@ import { ForgotPasswordForm } from "./components/auth/ForgotPasswordForm";
 import { ResetPasswordForm } from "./components/auth/ResetPasswordForm";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { AccountSettings } from "./components/auth/AccountSettings";
+import { UserProfileForm } from "./components/auth/UserProfile";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "./components/ui/tabs";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ComparisonMode } from "./components/ComparisonMode";
 import { SavedAnalysisDetail } from "./components/SavedAnalysisDetail";
@@ -126,8 +128,19 @@ function App() {
                       <a href="/" className="font-semibold">TrueCost</a>
                       <a href="/" className="text-sm text-muted-foreground underline">Back</a>
                     </header>
-                    <main className="flex-1 p-6 flex items-center justify-center">
-                      <AccountSettings />
+                    <main className="flex-1 p-6 flex justify-center">
+                      <Tabs defaultValue="account" className="w-full max-w-xl">
+                        <TabsList className="mb-4">
+                          <TabsTrigger value="account">Account</TabsTrigger>
+                          <TabsTrigger value="profile">Profile</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="account">
+                          <AccountSettings />
+                        </TabsContent>
+                        <TabsContent value="profile">
+                          <UserProfileForm />
+                        </TabsContent>
+                      </Tabs>
                     </main>
                   </div>
                 </ProtectedRoute>

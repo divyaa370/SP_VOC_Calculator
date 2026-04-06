@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { LogoutButton } from "./auth/LogoutButton";
 import { useAuth } from "../context/AuthContext";
-import { ItemEntryForm, type ItemFormData } from "./ItemEntryForm";
+import { ItemEntryForm, type ItemFormData, type CarFormData } from "./ItemEntryForm";
 import { ResultsDashboard } from "./ResultsDashboard";
+import { getUserProfile, type UserProfile } from "../lib/auth";
 
 const NAV_LINKS = [
   { href: "/saved-analyses", label: "Saved" },
@@ -16,6 +17,12 @@ function Home() {
   const { user } = useAuth();
   const [itemData, setItemData] = useState<ItemFormData | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+
+  // Load user profile for calculator defaults
+  useEffect(() => {
+    if (user?.id) setProfile(getUserProfile(user.id));
+  }, [user?.id]);
 
   // Pick up pre-fill from search history re-run
   useEffect(() => {
@@ -25,6 +32,19 @@ function Home() {
       sessionStorage.removeItem("truecost_prefill");
     }
   }, []);
+
+  // Derive ItemEntryForm defaults from profile
+  const profileDefaults = useMemo<Partial<CarFormData>>(() => {
+    if (!profile) return {};
+    const d: Partial<CarFormData> = {};
+    if (profile.commuteDaysPerWeek && profile.oneWayCommuteMiles) {
+      d.annualMileage = Math.round(profile.oneWayCommuteMiles * 2 * profile.commuteDaysPerWeek * 52);
+    }
+    if (profile.preferredFuelPrice) d.fuelPricePerUnit = profile.preferredFuelPrice;
+    if (profile.monthlyInsurancePremium) d.insuranceMonthly = profile.monthlyInsurancePremium;
+    if (profile.stateOfRegistration) d.state = profile.stateOfRegistration;
+    return d;
+  }, [profile]);
 
   return (
     <div className="w-screen min-h-screen flex flex-col">
@@ -65,9 +85,13 @@ function Home() {
       </header>
       <main className="flex-1 p-4 sm:p-6 overflow-y-auto flex justify-center">
         {!itemData ? (
-          <ItemEntryForm onSubmit={setItemData} />
+          <ItemEntryForm onSubmit={setItemData} defaultValues={profileDefaults} />
         ) : (
-          <ResultsDashboard item={itemData} onReset={() => setItemData(null)} />
+          <ResultsDashboard
+            item={itemData}
+            onReset={() => setItemData(null)}
+            initialProjectionYears={profile?.ownershipHorizonYears}
+          />
         )}
       </main>
     </div>
