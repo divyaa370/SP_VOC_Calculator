@@ -101,6 +101,36 @@ describe("computeMonthlyCosts – car", () => {
     const toyota: ItemFormData = { ...carItem, make: "Toyota" };
     expect(computeMonthlyCosts(bmw).Maintenance).toBeGreaterThan(computeMonthlyCosts(toyota).Maintenance);
   });
+
+  it("very high mileage (500000) does not produce Infinity or NaN", () => {
+    const highMileage: ItemFormData = { ...carItem, annualMileage: 500000 };
+    const costs = computeMonthlyCosts(highMileage);
+    Object.values(costs).forEach((v) => {
+      expect(Number.isFinite(v)).toBe(true);
+      expect(Number.isNaN(v)).toBe(false);
+    });
+  });
+
+  it("all four fuel types produce distinct fuel costs at same mileage/price", () => {
+    const gasCosts = computeMonthlyCosts({ ...carItem, fuelType: "gasoline", mpg: 28, fuelPricePerUnit: 3.45 }).Fuel;
+    const dieselCosts = computeMonthlyCosts({ ...carItem, fuelType: "diesel", mpg: 32, fuelPricePerUnit: 3.80 }).Fuel;
+    const evCosts = computeMonthlyCosts({ ...carItem, fuelType: "electric", mpg: 3.5, fuelPricePerUnit: 0.16 }).Fuel;
+    const hybridCosts = computeMonthlyCosts({ ...carItem, fuelType: "hybrid", mpg: 45, fuelPricePerUnit: 3.45 }).Fuel;
+    const uniqueValues = new Set([gasCosts, dieselCosts, evCosts, hybridCosts]);
+    expect(uniqueValues.size).toBe(4);
+  });
+
+  it("depreciation is always less than purchasePrice / 12", () => {
+    const costs = computeMonthlyCosts(carItem);
+    expect(costs.Depreciation).toBeLessThan(carItem.purchasePrice / 12);
+  });
+
+  it("all returned values are finite numbers (no Infinity or NaN)", () => {
+    const costs = computeMonthlyCosts(carItem);
+    Object.entries(costs).forEach(([key, val]) => {
+      expect(Number.isFinite(val), `${key} should be finite`).toBe(true);
+    });
+  });
 });
 
 // ── buildYearlyProjection ─────────────────────────────────────────────────
@@ -132,6 +162,23 @@ describe("buildYearlyProjection", () => {
     const costs = computeMonthlyCosts(carItem);
     const data = buildYearlyProjection(costs, carItem, 10);
     expect(data).toHaveLength(10);
+  });
+
+  it("years=1 returns exactly 1 data point with a positive cumulative cost", () => {
+    const costs = computeMonthlyCosts(carItem);
+    const data = buildYearlyProjection(costs, carItem, 1);
+    expect(data).toHaveLength(1);
+    expect(data[0]["Cumulative Cost"]).toBeGreaterThan(0);
+  });
+
+  it("years=15 returns exactly 15 data points all with finite values", () => {
+    const costs = computeMonthlyCosts(carItem);
+    const data = buildYearlyProjection(costs, carItem, 15);
+    expect(data).toHaveLength(15);
+    data.forEach((row) => {
+      expect(Number.isFinite(row["Cumulative Cost"])).toBe(true);
+      expect(Number.isFinite(row["Vehicle Value"])).toBe(true);
+    });
   });
 });
 
