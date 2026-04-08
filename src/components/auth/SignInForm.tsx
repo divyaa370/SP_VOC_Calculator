@@ -9,6 +9,7 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Spinner } from "../ui/Spinner";
 
 const LOCKOUT_ATTEMPTS = 3;
 const LOCKOUT_DURATION_MS = 30_000;
@@ -51,13 +52,7 @@ export function SignInForm() {
     formState: { errors },
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
-  if (authLoading) {
-    return (
-      <div className="flex items-center justify-center w-screen h-screen">
-        <p className="text-muted-foreground">Loading...</p>
-      </div>
-    );
-  }
+  if (authLoading) return <Spinner />;
 
   if (user) {
     return <Navigate to="/app" replace />;

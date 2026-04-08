@@ -1,4 +1,6 @@
 import { Suspense, useState, useEffect, useCallback } from "react";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { Spinner } from "./components/ui/Spinner";
 import { useRoutes, Routes, Route, Navigate } from "react-router-dom";
 import { SignInForm } from "./components/auth/SignInForm";
 import { SignUpForm } from "./components/auth/SignUpForm";
@@ -109,7 +111,8 @@ function SavedAnalysesPage() {
 function App() {
   return (
     <AuthProvider>
-      <Suspense fallback={<p>Loading…</p>}>
+      <ErrorBoundary>
+      <Suspense fallback={<Spinner />}>
         <>
           <Routes>
             {/* Auth routes */}
@@ -161,6 +164,7 @@ function App() {
           {import.meta.env.VITE_TEMPO === "true" && useRoutes(routes)}
         </>
       </Suspense>
+      </ErrorBoundary>
     </AuthProvider>
   );
 }
