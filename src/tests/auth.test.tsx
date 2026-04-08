@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
+import type { Session, User } from "@supabase/supabase-js";
 import { AuthProvider } from "../context/AuthContext";
 import { SignInForm } from "../components/auth/SignInForm";
 import { SignUpForm } from "../components/auth/SignUpForm";
@@ -54,7 +55,7 @@ describe("SignInForm", () => {
   });
 
   it("calls signIn with correct credentials", async () => {
-    vi.mocked(AuthService.signIn).mockResolvedValueOnce({ user: { id: "1" }, session: {} } as never);
+    vi.mocked(AuthService.signIn).mockResolvedValueOnce({ user: { id: "1" } as User, session: {} as Session });
     renderWithRouter(<SignInForm />, { initialEntries: ["/signin"] });
 
     await waitFor(() => screen.getByLabelText(/email/i));
@@ -74,9 +75,9 @@ describe("SignInForm", () => {
     vi.mocked(AuthService.getSession).mockResolvedValueOnce({
       user: { id: "1", email: "user@example.com" },
       access_token: "token",
-    } as never);
+    } as Session);
     vi.mocked(AuthService.onAuthStateChange).mockImplementationOnce((cb) => {
-      cb({ user: { id: "1" }, access_token: "token" });
+      cb({ user: { id: "1" }, access_token: "token" } as Session);
       return () => {};
     });
 
@@ -104,9 +105,9 @@ describe("SignUpForm", () => {
     vi.mocked(AuthService.getSession).mockResolvedValueOnce({
       user: { id: "1", email: "user@example.com" },
       access_token: "token",
-    } as never);
+    } as Session);
     vi.mocked(AuthService.onAuthStateChange).mockImplementationOnce((cb) => {
-      cb({ user: { id: "1" }, access_token: "token" });
+      cb({ user: { id: "1" }, access_token: "token" } as Session);
       return () => {};
     });
 
@@ -127,7 +128,7 @@ describe("SignUpForm", () => {
   });
 
   it("redirects to /signin after successful signup", async () => {
-    vi.mocked(AuthService.signUp).mockResolvedValueOnce({ user: null, session: null } as never);
+    vi.mocked(AuthService.signUp).mockResolvedValueOnce({ user: null, session: null });
 
     render(
       <MemoryRouter initialEntries={["/signup"]}>
@@ -183,9 +184,9 @@ describe("ProtectedRoute", () => {
     vi.mocked(AuthService.getSession).mockResolvedValueOnce({
       user: { id: "1", email: "user@example.com" },
       access_token: "token",
-    } as never);
+    } as Session);
     vi.mocked(AuthService.onAuthStateChange).mockImplementationOnce((cb) => {
-      cb({ user: { id: "1" }, access_token: "token" });
+      cb({ user: { id: "1" }, access_token: "token" } as Session);
       return () => {};
     });
 
@@ -255,7 +256,7 @@ describe("Full auth flow", () => {
 
   it("signup → signin → access /app → logout → /app redirects to /signin", async () => {
     // Step 1: signup redirects to /signin
-    vi.mocked(AuthService.signUp).mockResolvedValueOnce({ user: null, session: null } as never);
+    vi.mocked(AuthService.signUp).mockResolvedValueOnce({ user: null, session: null });
 
     const { unmount } = render(
       <MemoryRouter initialEntries={["/signup"]}>
@@ -302,6 +303,103 @@ describe("Full auth flow", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Sign In Page")).toBeDefined();
+    });
+  });
+});
+
+// ── Rate limit lockout ────────────────────────────────────────────────────────
+
+describe("SignInForm — rate limit lockout", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("locks submit button and shows message after 3 failed attempts", async () => {
+    vi.mocked(AuthService.signIn).mockRejectedValue(new Error("Invalid login credentials"));
+    renderWithRouter(<SignInForm />, { initialEntries: ["/signin"] });
+
+    await waitFor(() => screen.getByLabelText(/email/i));
+
+    for (let i = 0; i < 3; i++) {
+      const btn = screen.queryByRole("button", { name: /sign in/i });
+      if (btn && !btn.hasAttribute("disabled")) {
+        await userEvent.clear(screen.getByLabelText(/email/i));
+        await userEvent.clear(screen.getByLabelText(/password/i));
+        await userEvent.type(screen.getByLabelText(/email/i), "bad@example.com");
+        await userEvent.type(screen.getByLabelText(/password/i), "wrongpass");
+        await userEvent.click(btn);
+      }
+    }
+
+    await waitFor(() => {
+      expect(screen.getByText(/too many failed attempts/i)).toBeDefined();
+    });
+
+    const lockedBtn = screen.getByRole("button", { name: /locked/i });
+    expect(lockedBtn.hasAttribute("disabled")).toBe(true);
+  });
+});
+
+// ── SignUpForm password validation ────────────────────────────────────────────
+
+describe("SignUpForm — password strength validation", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("rejects password shorter than 8 characters", async () => {
+    renderWithRouter(<SignUpForm />, { initialEntries: ["/signup"] });
+    await waitFor(() => screen.getByLabelText(/username/i));
+
+    await userEvent.type(screen.getByLabelText(/username/i), "testuser");
+    await userEvent.type(screen.getByLabelText(/email/i), "user@example.com");
+    await userEvent.type(screen.getByLabelText(/password/i), "Ab1");
+    await userEvent.click(screen.getByRole("button", { name: /sign up/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/at least 8 characters/i)).toBeDefined();
+    });
+    expect(AuthService.signUp).not.toHaveBeenCalled();
+  });
+
+  it("rejects password without an uppercase letter", async () => {
+    renderWithRouter(<SignUpForm />, { initialEntries: ["/signup"] });
+    await waitFor(() => screen.getByLabelText(/username/i));
+
+    await userEvent.type(screen.getByLabelText(/username/i), "testuser");
+    await userEvent.type(screen.getByLabelText(/email/i), "user@example.com");
+    await userEvent.type(screen.getByLabelText(/password/i), "password1");
+    await userEvent.click(screen.getByRole("button", { name: /sign up/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/uppercase letter/i)).toBeDefined();
+    });
+    expect(AuthService.signUp).not.toHaveBeenCalled();
+  });
+
+  it("rejects password without a number", async () => {
+    renderWithRouter(<SignUpForm />, { initialEntries: ["/signup"] });
+    await waitFor(() => screen.getByLabelText(/username/i));
+
+    await userEvent.type(screen.getByLabelText(/username/i), "testuser");
+    await userEvent.type(screen.getByLabelText(/email/i), "user@example.com");
+    await userEvent.type(screen.getByLabelText(/password/i), "Passwordnonum");
+    await userEvent.click(screen.getByRole("button", { name: /sign up/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/contain a number/i)).toBeDefined();
+    });
+    expect(AuthService.signUp).not.toHaveBeenCalled();
+  });
+
+  it("shows server error message on duplicate email", async () => {
+    vi.mocked(AuthService.signUp).mockRejectedValueOnce(new Error("User already registered"));
+    renderWithRouter(<SignUpForm />, { initialEntries: ["/signup"] });
+    await waitFor(() => screen.getByLabelText(/username/i));
+
+    await userEvent.type(screen.getByLabelText(/username/i), "testuser");
+    await userEvent.type(screen.getByLabelText(/email/i), "existing@example.com");
+    await userEvent.type(screen.getByLabelText(/password/i), "Password1");
+    await userEvent.click(screen.getByRole("button", { name: /sign up/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/user already registered/i)).toBeDefined();
     });
   });
 });
