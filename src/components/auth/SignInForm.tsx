@@ -65,7 +65,7 @@ export function SignInForm() {
     try {
       await AuthService.signIn(data);
       setFailedAttempts(0);
-      navigate("/app");
+      navigate("/");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "";
       setServerError(

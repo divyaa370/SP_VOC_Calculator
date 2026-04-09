@@ -408,7 +408,7 @@ export function ItemEntryForm({ onSubmit, defaultValues }: ItemEntryFormProps) {
                 </div>
                 <div className="space-y-1">
                   <Label>Loan Amount ($)</Label>
-                  <Input type="number" {...register("loanAmount", { valueAsNumber: true })} />
+                  <Input type="number" {...register("loanAmount", { valueAsNumber: true })} readOnly />
                   <FieldError msg={carErrors.loanAmount?.message} />
                 </div>
               </div>

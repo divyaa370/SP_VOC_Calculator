@@ -22,7 +22,7 @@ export function ResultsDashboard({ item, onReset, initialProjectionYears }: Resu
   // Record search history on mount
   useEffect(() => {
     if (user?.id) addSearchHistory(user.id, item);
-  }, []);
+  }, [user?.id, item]);
 
   const handleSave = () => {
     if (!user?.id) return;

@@ -14,8 +14,8 @@ export function computeSustainabilityScore(item: ItemFormData): number {
   } else {
     const baseBySize: Record<string, number> = { small: 75, medium: 60, large: 45 };
     const bonusByType: Record<string, number> = { bird: 10, cat: 5, other: 5, dog: 0 };
-    const base = baseBySize[item.size] ?? 60;
-    const bonus = bonusByType[item.petType] ?? 0;
+    const base = baseBySize[item.size ?? "medium"] ?? 60;
+    const bonus = bonusByType[item.petType ?? "other"] ?? 0;
     return Math.min(100, Math.max(0, base + bonus));
   }
 }

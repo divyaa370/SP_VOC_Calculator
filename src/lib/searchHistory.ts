@@ -83,8 +83,11 @@ const key = (userId: string) => `truecost_history_${userId}`;
 
 const ls = {
   getAll(userId: string): SearchHistoryEntry[] {
-    try { return JSON.parse(localStorage.getItem(key(userId)) ?? "[]"); }
-    catch { return []; }
+    try {
+      const raw = JSON.parse(localStorage.getItem(key(userId)) ?? "[]");
+      if (!Array.isArray(raw)) return [];
+      return raw;
+    } catch { return []; }
   },
 
   add(userId: string, item: ItemFormData): SearchHistoryEntry {
