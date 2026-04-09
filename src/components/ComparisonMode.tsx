@@ -41,8 +41,7 @@ function TradeInCalculator({ currentMonthly, replacementMonthly, replacementPric
   } else {
     // Switching cost = net cost of new vehicle after trade-in credit
     // (simplified: we treat the down payment difference as the switching cost)
-    const switchingCost = effectiveCost - replacementPrice + (replacementPrice - effectiveCost < 0 ? 0 : replacementPrice - effectiveCost);
-    // Better: break-even = (effective net out-of-pocket relative to keeping current) / monthly savings
+    // Break-even = (effective net out-of-pocket relative to keeping current) / monthly savings
     // If there's negative equity, you pay extra upfront; break-even = negative equity / monthly savings
     if (negative > 0) {
       const breakEvenMonths = Math.ceil(negative / monthlySavings);
@@ -206,7 +205,7 @@ export function ComparisonMode({ userId: _userId }: ComparisonModeProps) {
               <CardContent className="space-y-1 text-sm">
                 <p>Monthly: <span className="font-semibold">{fmt(total)}</span></p>
                 <p>Annual: <span className="font-semibold">{fmt(total * 12)}</span></p>
-                <p>5-Year: <span className="font-semibold">{fmt(projA[4]?.["Cumulative Cost"] ?? total * 60)}</span></p>
+                <p>5-Year: <span className="font-semibold">{fmt((i === 0 ? projA : projB)[4]?.["Cumulative Cost"] ?? total * 60)}</span></p>
                 <p>Sustainability: <span className="font-semibold">{scoreToGrade(score)} — {scoreToLabel(score)}</span></p>
               </CardContent>
             </Card>

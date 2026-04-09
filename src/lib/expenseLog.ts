@@ -80,16 +80,16 @@ export async function deleteExpense(userId: string, id: string): Promise<void> {
 
 function fromRow(r: Record<string, unknown>): ExpenseEntry {
   return {
-    id: r.id as string,
-    userId: r.user_id as string,
+    id: (r.id ?? "") as string,
+    userId: (r.user_id ?? "") as string,
     analysisId: r.analysis_id as string | undefined,
-    loggedAt: r.logged_at as string,
-    category: r.category as ExpenseCategory,
-    description: r.description as string,
-    amount: r.amount as number,
+    loggedAt: (r.logged_at ?? "") as string,
+    category: (r.category ?? "") as ExpenseCategory,
+    description: (r.description ?? "") as string,
+    amount: (r.amount ?? 0) as number,
     mileage: r.mileage as number | undefined,
     vendor: r.vendor as string | undefined,
-    underWarranty: r.under_warranty as boolean,
+    underWarranty: (r.under_warranty ?? false) as boolean,
   };
 }
 

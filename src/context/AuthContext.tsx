@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { AuthService } from "../services/authService";
+import { supabase } from "../lib/supabaseClient";
 
 interface AuthContextType {
   user: User | null;
@@ -30,7 +31,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const typedSession = s as Session | null;
       setSession(typedSession);
       setUser(typedSession?.user ?? null);
-      if (typedSession?.user) setIsGuest(false);
+      if (typedSession?.user) {
+        setIsGuest(false);
+        // Rotate the session token immediately after sign-in to prevent session fixation.
+        // Supabase already issues a fresh session on signInWithPassword, but explicitly
+        // refreshing here ensures the token is current and rotated on the client.
+        supabase.auth.refreshSession().catch(() => {
+          // Non-fatal: the original session remains valid if refresh fails.
+        });
+      }
       setLoading(false);
     });
 

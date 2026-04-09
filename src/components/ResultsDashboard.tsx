@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { CostDashboard } from "./CostDashboard";
+import { ErrorBoundary } from "./ErrorBoundary";
 import { Button } from "./ui/button";
 import { saveAnalysis } from "../lib/savedAnalyses";
 import { addSearchHistory } from "../lib/searchHistory";
@@ -21,7 +22,7 @@ export function ResultsDashboard({ item, onReset, initialProjectionYears }: Resu
   // Record search history on mount
   useEffect(() => {
     if (user?.id) addSearchHistory(user.id, item);
-  }, []);
+  }, [user?.id, item]);
 
   const handleSave = () => {
     if (!user?.id) return;
@@ -45,7 +46,9 @@ export function ResultsDashboard({ item, onReset, initialProjectionYears }: Resu
           Compare
         </Button>
       </div>
-      <CostDashboard item={item} onReset={onReset} initialProjectionYears={initialProjectionYears} />
+      <ErrorBoundary>
+        <CostDashboard item={item} onReset={onReset} initialProjectionYears={initialProjectionYears} />
+      </ErrorBoundary>
     </div>
   );
 }

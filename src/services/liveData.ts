@@ -8,6 +8,7 @@
  * - The EIA API key is read from VITE_EIA_API_KEY; if absent, fallbacks are used silently.
  */
 
+import { logger } from "../lib/logger";
 import {
   FALLBACK_GAS_PRICE_PER_GAL,
   FALLBACK_DIESEL_PRICE_PER_GAL,
@@ -40,7 +41,8 @@ export interface LiveDataResult {
 
 // ── EIA API ───────────────────────────────────────────────────────────────────
 
-const EIA_KEY = import.meta.env.VITE_EIA_API_KEY as string | undefined;
+import { env } from "../lib/env";
+const EIA_KEY = env.VITE_EIA_API_KEY;
 const EIA_BASE = "https://api.eia.gov/v2";
 
 async function fetchGasPrice(): Promise<number> {
@@ -48,7 +50,7 @@ async function fetchGasPrice(): Promise<number> {
   if (cached !== null) return cached;
 
   if (!EIA_KEY) {
-    console.warn("[liveData] VITE_EIA_API_KEY not set — using fallback gas price.");
+    logger.warn("EIA API key not configured — using fallback gas price.");
     return FALLBACK_GAS_PRICE_PER_GAL;
   }
 
@@ -74,7 +76,7 @@ async function fetchGasPrice(): Promise<number> {
     setCached("gas_price_national", price, TTL_GAS_PRICE);
     return price;
   } catch (e) {
-    console.warn("[liveData] Gas price fetch failed:", (e as Error).message, "— using fallback.");
+    logger.warn("Gas price fetch failed — using fallback.", (e as Error).message);
     return FALLBACK_GAS_PRICE_PER_GAL;
   }
 }
@@ -84,7 +86,7 @@ async function fetchElectricityRate(): Promise<number> {
   if (cached !== null) return cached;
 
   if (!EIA_KEY) {
-    console.warn("[liveData] VITE_EIA_API_KEY not set — using fallback electricity rate.");
+    logger.warn("EIA API key not configured — using fallback electricity rate.");
     return FALLBACK_ELECTRICITY_RATE_PER_KWH;
   }
 
@@ -111,7 +113,7 @@ async function fetchElectricityRate(): Promise<number> {
     setCached("electricity_rate_national", rate, TTL_ELECTRICITY);
     return rate;
   } catch (e) {
-    console.warn("[liveData] Electricity rate fetch failed:", (e as Error).message, "— using fallback.");
+    logger.warn("Electricity rate fetch failed — using fallback.", (e as Error).message);
     return FALLBACK_ELECTRICITY_RATE_PER_KWH;
   }
 }

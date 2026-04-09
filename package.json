@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "types:supabase": "npx supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > src/types/supabase.ts"
+    "types:supabase": "npx supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > src/types/supabase.ts",
+    "precommit": "tsc --noEmit && vitest run"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.6.0",
@@ -73,6 +74,7 @@
     "@types/react": "^18.2.66",
     "@types/react-dom": "^18.2.22",
     "@vitejs/plugin-react-swc": "^3.8.1",
+    "@vitest/coverage-v8": "^4.1.2",
     "autoprefixer": "^10.4.19",
     "jsdom": "^24.0.0",
     "postcss": "^8.4.38",

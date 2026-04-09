@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, memo } from "react";
 import {
   BarChart, Bar, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -183,7 +183,7 @@ function fmt(v: number) {
   return `$${Math.round(v).toLocaleString("en-US")}`;
 }
 
-function SummaryCard({ title, value, sub }: { title: string; value: string; sub?: string }) {
+const SummaryCard = memo(function SummaryCard({ title, value, sub }: { title: string; value: string; sub?: string }) {
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -195,7 +195,100 @@ function SummaryCard({ title, value, sub }: { title: string; value: string; sub?
       </CardContent>
     </Card>
   );
+});
+
+// ── Memoized chart sections ───────────────────────────────────────────────
+// Wrapped in memo so Recharts' ResizeObserver doesn't re-run on unrelated
+// parent re-renders (e.g. projection year slider changes only affect ProjectionChart).
+
+interface BreakdownChartProps {
+  breakdownData: Record<string, number>[];
+  costKeys: (keyof MonthlyCosts)[];
 }
+
+const BreakdownChart = memo(function BreakdownChart({ breakdownData, costKeys }: BreakdownChartProps) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Monthly Cost Breakdown</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ResponsiveContainer width="100%" height={280}>
+          <BarChart data={breakdownData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+            <XAxis dataKey="name" />
+            <YAxis tickFormatter={(v) => `$${v}`} width={60} />
+            <Tooltip formatter={(v) => typeof v === "number" ? fmt(v) : ""} />
+            <Legend />
+            {costKeys.map((key, i) => (
+              <Bar key={key} dataKey={key} stackId="a" fill={COLORS[i % COLORS.length]} />
+            ))}
+          </BarChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
+  );
+}, (prev, next) =>
+  prev.breakdownData === next.breakdownData && prev.costKeys === next.costKeys
+);
+
+interface ProjectionChartProps {
+  projectionData: ReturnType<typeof buildYearlyProjection>;
+  projectionYears: number;
+  car: CarFormData | null;
+  onYearsChange: (years: number) => void;
+}
+
+const ProjectionChart = memo(function ProjectionChart({
+  projectionData, projectionYears, car, onYearsChange,
+}: ProjectionChartProps) {
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-base">Ownership Cost Projection</CardTitle>
+        <div className="flex items-center gap-3 w-48">
+          <span className="text-xs text-muted-foreground whitespace-nowrap">{projectionYears} yr</span>
+          <Slider
+            min={1}
+            max={15}
+            step={1}
+            value={[projectionYears]}
+            onValueChange={([v]) => onYearsChange(v)}
+            className="w-full"
+          />
+        </div>
+      </CardHeader>
+      <CardContent>
+        <ResponsiveContainer width="100%" height={280}>
+          <LineChart data={projectionData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="year" />
+            <YAxis tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} width={55} />
+            <Tooltip formatter={(v) => typeof v === "number" ? fmt(v) : ""} />
+            <Legend />
+            <Line type="monotone" dataKey="Cumulative Cost" stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} />
+            {car && (
+              <Line type="monotone" dataKey="Vehicle Value" stroke="#10b981" strokeWidth={2} strokeDasharray="4 4" dot={false} />
+            )}
+            {car && (
+              <Line type="monotone" dataKey="Lease Equivalent" stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="2 3" dot={false} />
+            )}
+          </LineChart>
+        </ResponsiveContainer>
+        {car && (
+          <p className="text-xs text-muted-foreground mt-2">
+            Dashed green = estimated resale value. Orange = cumulative lease cost (~1.2% MSRP/month).
+            Where ownership line crosses lease line is your break-even point.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}, (prev, next) =>
+  prev.projectionData === next.projectionData &&
+  prev.projectionYears === next.projectionYears &&
+  prev.car === next.car
+);
 
 // ── Main Dashboard ────────────────────────────────────────────────────────
 
@@ -224,6 +317,9 @@ export function CostDashboard({ item, onReset, initialProjectionYears }: CostDas
   const costKeys = Object.keys(costs) as (keyof MonthlyCosts)[];
   const breakdownData = [{ name: "Monthly", ...costs }];
 
+  // itemLabel is rendered as a JSX text node (never via dangerouslySetInnerHTML).
+  // React automatically escapes string children — no manual sanitization needed.
+  // The make/model fields are also validated server-side by zod (alphanumeric + safe chars only).
   const itemLabel =
     item.category === "car"
       ? `${(item as CarFormData).year} ${(item as CarFormData).make} ${(item as CarFormData).model}`
@@ -301,67 +397,15 @@ export function CostDashboard({ item, onReset, initialProjectionYears }: CostDas
       </div>
 
       {/* Monthly breakdown bar chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Monthly Cost Breakdown</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={breakdownData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="name" />
-              <YAxis tickFormatter={(v) => `$${v}`} width={60} />
-              <Tooltip formatter={(v) => typeof v === "number" ? fmt(v) : ""} />
-              <Legend />
-              {costKeys.map((key, i) => (
-                <Bar key={key} dataKey={key} stackId="a" fill={COLORS[i % COLORS.length]} />
-              ))}
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+      <BreakdownChart breakdownData={breakdownData} costKeys={costKeys} />
 
       {/* Projection chart with slider */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-base">Ownership Cost Projection</CardTitle>
-          <div className="flex items-center gap-3 w-48">
-            <span className="text-xs text-muted-foreground whitespace-nowrap">{projectionYears} yr</span>
-            <Slider
-              min={1}
-              max={15}
-              step={1}
-              value={[projectionYears]}
-              onValueChange={([v]) => setProjectionYears(v)}
-              className="w-full"
-            />
-          </div>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={projectionData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="year" />
-              <YAxis tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} width={55} />
-              <Tooltip formatter={(v) => typeof v === "number" ? fmt(v) : ""} />
-              <Legend />
-              <Line type="monotone" dataKey="Cumulative Cost" stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} />
-              {car && (
-                <Line type="monotone" dataKey="Vehicle Value" stroke="#10b981" strokeWidth={2} strokeDasharray="4 4" dot={false} />
-              )}
-              {car && (
-                <Line type="monotone" dataKey="Lease Equivalent" stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="2 3" dot={false} />
-              )}
-            </LineChart>
-          </ResponsiveContainer>
-          {car && (
-            <p className="text-xs text-muted-foreground mt-2">
-              Dashed green = estimated resale value. Orange = cumulative lease cost (~1.2% MSRP/month).
-              Where ownership line crosses lease line is your break-even point.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+      <ProjectionChart
+        projectionData={projectionData}
+        projectionYears={projectionYears}
+        car={car}
+        onYearsChange={setProjectionYears}
+      />
 
       {/* Alerts & recommendations */}
       <RecommendationsPanel item={item} monthlyTotal={monthlyTotal} avgAnnualOwnershipCost={liveData.avgAnnualOwnershipCost} />

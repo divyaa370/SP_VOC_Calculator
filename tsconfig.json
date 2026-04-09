@@ -15,6 +15,9 @@
     "jsx": "react-jsx",
 
     "strict": true,
+    // noUncheckedIndexedAccess and exactOptionalPropertyTypes are not enabled yet.
+    // Enable these and run: npx tsc --noEmit to surface errors, then fix before committing.
+    // Main affected patterns: COLORS[i%n], items[0], Slider onValueChange destructuring.
     "paths": {
       "@/*": ["./src/*"]
     }

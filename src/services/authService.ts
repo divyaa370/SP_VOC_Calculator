@@ -23,7 +23,8 @@ export const AuthService = {
   },
 
   async signOut() {
-    const { error } = await supabase.auth.signOut();
+    // scope: 'global' invalidates all active sessions server-side, not just the current device.
+    const { error } = await supabase.auth.signOut({ scope: "global" });
     if (error) throw error;
   },
 

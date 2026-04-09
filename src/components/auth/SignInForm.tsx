@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -9,9 +9,13 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Spinner } from "../ui/Spinner";
+
+const LOCKOUT_ATTEMPTS = 3;
+const LOCKOUT_DURATION_MS = 30_000;
 
 const schema = z.object({
-  email: z.string().email("Invalid email address").max(254, "Email too long"),
+  email: z.string().trim().email("Invalid email address").max(254, "Email too long"),
   password: z.string().min(1, "Password is required").max(128, "Password too long"),
 });
 
@@ -22,6 +26,25 @@ export function SignInForm() {
   const { user, loading: authLoading, enterGuestMode } = useAuth();
   const [serverError, setServerError] = useState("");
   const [loading, setLoading] = useState(false);
+  // Rate limiting: tracked in component state only — resets on page load (intentional).
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [lockedUntil, setLockedUntil] = useState<number | null>(null);
+  const [lockSecondsLeft, setLockSecondsLeft] = useState(0);
+
+  // Countdown ticker for the lockout display
+  useEffect(() => {
+    if (!lockedUntil) return;
+    const tick = () => {
+      const left = Math.ceil((lockedUntil - Date.now()) / 1000);
+      if (left <= 0) { setLockedUntil(null); setLockSecondsLeft(0); }
+      else setLockSecondsLeft(left);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [lockedUntil]);
+
+  const isLocked = lockedUntil !== null && Date.now() < lockedUntil;
 
   const {
     register,
@@ -29,29 +52,30 @@ export function SignInForm() {
     formState: { errors },
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
-  if (authLoading) {
-    return (
-      <div className="flex items-center justify-center w-screen h-screen">
-        <p className="text-muted-foreground">Loading...</p>
-      </div>
-    );
-  }
+  if (authLoading) return <Spinner />;
 
   if (user) {
     return <Navigate to="/app" replace />;
   }
 
   const onSubmit = async (data: FormData) => {
+    if (isLocked) return;
     setLoading(true);
     setServerError("");
     try {
       await AuthService.signIn(data);
-      navigate("/app");
+      setFailedAttempts(0);
+      navigate("/");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "";
       setServerError(
         msg.toLowerCase().includes("invalid") ? "Invalid email or password." : msg || "Sign in failed."
       );
+      const next = failedAttempts + 1;
+      setFailedAttempts(next);
+      if (next >= LOCKOUT_ATTEMPTS) {
+        setLockedUntil(Date.now() + LOCKOUT_DURATION_MS);
+      }
     } finally {
       setLoading(false);
     }
@@ -87,10 +111,17 @@ export function SignInForm() {
               )}
             </div>
 
-            {serverError && <p className="text-sm text-destructive">{serverError}</p>}
+            {serverError && !isLocked && (
+              <p className="text-sm text-destructive">{serverError}</p>
+            )}
+            {isLocked && (
+              <p className="text-sm text-destructive">
+                Too many failed attempts. Try again in {lockSecondsLeft}s.
+              </p>
+            )}
 
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Signing in..." : "Sign In"}
+            <Button type="submit" className="w-full" disabled={loading || isLocked}>
+              {loading ? "Signing in..." : isLocked ? `Locked (${lockSecondsLeft}s)` : "Sign In"}
             </Button>
 
             <Button

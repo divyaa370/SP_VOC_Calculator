@@ -9,13 +9,15 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Spinner } from "../ui/Spinner";
 
 const schema = z.object({
   username: z
     .string()
+    .trim()
     .min(3, "Username must be at least 3 characters")
     .max(50, "Username must be at most 50 characters"),
-  email: z.string().email("Invalid email address").max(254, "Email too long"),
+  email: z.string().trim().email("Invalid email address").max(254, "Email too long"),
   password: z
     .string()
     .min(8, "Password must be at least 8 characters")
@@ -38,13 +40,7 @@ export function SignUpForm() {
     formState: { errors },
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
-  if (authLoading) {
-    return (
-      <div className="flex items-center justify-center w-screen h-screen">
-        <p className="text-muted-foreground">Loading...</p>
-      </div>
-    );
-  }
+  if (authLoading) return <Spinner />;
 
   if (user) {
     return <Navigate to="/app" replace />;
