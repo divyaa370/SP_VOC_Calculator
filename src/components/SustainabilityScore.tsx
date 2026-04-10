@@ -7,8 +7,6 @@ import {
 } from "../lib/sustainabilityScore";
 import type { ItemFormData } from "./ItemEntryForm";
 
-export { computeSustainabilityScore };
-
 // ── Component ──────────────────────────────────────────────────────────────
 
 interface SustainabilityScoreProps {

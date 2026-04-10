@@ -6,7 +6,7 @@ import { Button } from "./ui/button";
 import { saveAnalysis } from "../lib/savedAnalyses";
 import { addSearchHistory } from "../lib/searchHistory";
 import type { ItemFormData } from "./ItemEntryForm";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 interface ResultsDashboardProps {
   item: ItemFormData;
@@ -18,10 +18,14 @@ export function ResultsDashboard({ item, onReset, initialProjectionYears }: Resu
   const { user } = useAuth();
   const navigate = useNavigate();
   const [savedConfirm, setSavedConfirm] = useState(false);
+  const recorded = useRef(false);
 
-  // Record search history on mount
+  // Record search history once per result view, even if user loads after mount
   useEffect(() => {
-    if (user?.id) addSearchHistory(user.id, item);
+    if (user?.id && !recorded.current) {
+      addSearchHistory(user.id, item);
+      recorded.current = true;
+    }
   }, [user?.id, item]);
 
   const handleSave = () => {
