@@ -55,7 +55,7 @@ export function SignInForm() {
   if (authLoading) return <Spinner />;
 
   if (user) {
-    return <Navigate to="/app" replace />;
+    return <Navigate to="/" replace />;
   }
 
   const onSubmit = async (data: FormData) => {
@@ -65,7 +65,8 @@ export function SignInForm() {
     try {
       await AuthService.signIn(data);
       setFailedAttempts(0);
-      navigate("/");
+      // Don't navigate here — wait for onAuthStateChange to update the context,
+      // then the if (user) guard above will redirect automatically.
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "";
       setServerError(
@@ -128,7 +129,7 @@ export function SignInForm() {
               type="button"
               variant="outline"
               className="w-full"
-              onClick={() => { enterGuestMode(); navigate("/app"); }}
+              onClick={() => { enterGuestMode(); navigate("/"); }}
             >
               Continue as Guest
             </Button>
