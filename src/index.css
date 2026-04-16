@@ -79,3 +79,28 @@
     min-height: 100vh;
   }
 }
+
+/* ── Global dark-mode form control overrides ─────────────────────────────
+   Ensures native <input>, <select>, and <textarea> elements render with
+   the dark theme instead of the browser's default white backgrounds.      */
+.dark {
+  color-scheme: dark;
+}
+
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: #2a2a5a;
+  color: rgb(230, 230, 245);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: rgba(180, 180, 210, 0.55);
+}
+
+.dark select option {
+  background-color: #2a2a5a;
+  color: rgb(230, 230, 245);
+}

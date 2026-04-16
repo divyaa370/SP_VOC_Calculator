@@ -52,7 +52,7 @@ function HomePage() {
           <LogoutButton />
         </div>
       </header>
-      <main className="flex-1 p-6 flex justify-center">
+      <main className="flex-1 p-6 flex flex-col items-center">
         {!itemData ? (
           <ItemEntryForm onSubmit={setItemData} />
         ) : (

@@ -4,7 +4,6 @@ import { z } from "zod";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { CAR_DATA, CAR_MAKES } from "../data/carData";
 import { getFuelPrice, DEFAULT_MPG } from "../lib/costConfig";
 import { decodeVin } from "../lib/vinLookup";
@@ -91,11 +90,14 @@ export type ItemFormData = z.infer<typeof schema>;
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 const selectCls =
-  "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
+  "flex h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
+  + " bg-[#2a2a5a] text-white border-white/15 focus-visible:ring-[#00d4ff]";
 
 function FieldError({ msg }: { msg?: string }) {
-  return msg ? <p className="text-xs text-destructive mt-0.5">{msg}</p> : null;
+  return msg ? <p className="text-xs text-red-400 mt-0.5">{msg}</p> : null;
 }
+
+const inputCls = "bg-[#2a2a5a] border-white/15 text-white placeholder:text-gray-500 focus-visible:ring-[#00d4ff]";
 
 // ── Component ──────────────────────────────────────────────────────────────
 
@@ -196,24 +198,28 @@ export function ItemEntryForm({ onSubmit, defaultValues }: ItemEntryFormProps) {
   const carErrors = errors as Partial<Record<keyof CarFormData, { message?: string }>>;
 
   return (
-    <Card className="w-full max-w-xl">
-      <CardHeader>
-        <CardTitle>Vehicle Cost Calculator</CardTitle>
-        <p className="text-sm text-muted-foreground">Enter your vehicle details to calculate total ownership cost.</p>
-      </CardHeader>
-      <CardContent>
+    <div
+      className="w-full max-w-xl rounded-2xl border"
+      style={{ backgroundColor: "#1e1e3f", borderColor: "rgba(255,255,255,0.08)" }}
+    >
+      <div className="px-6 pt-6 pb-3">
+        <h2 className="text-xl font-semibold text-white">Vehicle Cost Calculator</h2>
+        <p className="text-sm text-gray-400 mt-1">Enter your vehicle details to calculate total ownership cost.</p>
+      </div>
+      <div className="px-6 pb-6">
         {/* Section tabs */}
-        <div className="flex gap-1 mb-6 border-b pb-2">
+        <div className="flex gap-2 mb-6">
           {tabs.map((t) => (
             <button
               key={t.id}
               type="button"
               onClick={() => setSection(t.id)}
-              className={`px-3 py-1 text-sm rounded-md transition-colors ${
+              className="px-4 py-1.5 rounded-full text-sm font-medium transition-all"
+              style={
                 section === t.id
-                  ? "bg-primary text-primary-foreground font-medium"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+                  ? { background: "linear-gradient(90deg, #00d4ff, #7c3aed)", color: "#fff", fontWeight: 700 }
+                  : { background: "transparent", color: "#9ca3af" }
+              }
             >
               {t.label}
             </button>
@@ -227,31 +233,31 @@ export function ItemEntryForm({ onSubmit, defaultValues }: ItemEntryFormProps) {
             <>
               {/* VIN auto-fill */}
               <div className="space-y-1">
-                <Label>VIN <span className="text-muted-foreground font-normal">(optional — auto-fills vehicle details)</span></Label>
+                <Label className="text-gray-300">VIN <span className="text-gray-500 font-normal">(optional — auto-fills vehicle details)</span></Label>
                 <div className="flex gap-2">
                   <Input
                     value={vinInput}
                     onChange={(e) => { setVinInput(e.target.value.toUpperCase()); setVinError(null); }}
                     placeholder="17-character VIN"
                     maxLength={17}
-                    className="font-mono flex-1"
+                    className={`font-mono flex-1 ${inputCls}`}
                   />
-                  <Button
+                  <button
                     type="button"
-                    variant="outline"
                     onClick={handleVinLookup}
                     disabled={vinInput.length !== 17 || vinLoading}
-                    className="whitespace-nowrap"
+                    className="whitespace-nowrap px-3 py-1.5 rounded-md text-sm font-medium transition-colors disabled:opacity-50"
+                    style={{ backgroundColor: "#00d4ff", color: "#0d0d2b" }}
                   >
                     {vinLoading ? "Looking up…" : "Auto-fill"}
-                  </Button>
+                  </button>
                 </div>
-                {vinError && <p className="text-xs text-destructive">{vinError}</p>}
+                {vinError && <p className="text-xs text-red-400">{vinError}</p>}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <Label>Make</Label>
+                  <Label className="text-gray-300">Make</Label>
                   <Controller
                     name="make"
                     control={control}
@@ -269,7 +275,7 @@ export function ItemEntryForm({ onSubmit, defaultValues }: ItemEntryFormProps) {
                   <FieldError msg={carErrors.make?.message} />
                 </div>
                 <div className="space-y-1">
-                  <Label>Model</Label>
+                  <Label className="text-gray-300">Model</Label>
                   <Controller
                     name="model"
                     control={control}
@@ -288,12 +294,12 @@ export function ItemEntryForm({ onSubmit, defaultValues }: ItemEntryFormProps) {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <Label>Year</Label>
-                  <Input type="number" {...register("year", { valueAsNumber: true })} placeholder="2022" />
+                  <Label className="text-gray-300">Year</Label>
+                  <Input type="number" {...register("year", { valueAsNumber: true })} placeholder="2022" className={inputCls} />
                   <FieldError msg={carErrors.year?.message} />
                 </div>
                 <div className="space-y-1">
-                  <Label>Fuel Type</Label>
+                  <Label className="text-gray-300">Fuel Type</Label>
                   <Controller
                     name="fuelType"
                     control={control}
@@ -315,7 +321,7 @@ export function ItemEntryForm({ onSubmit, defaultValues }: ItemEntryFormProps) {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <Label>State</Label>
+                  <Label className="text-gray-300">State</Label>
                   <Controller
                     name="state"
                     control={control}
@@ -332,42 +338,42 @@ export function ItemEntryForm({ onSubmit, defaultValues }: ItemEntryFormProps) {
                   <FieldError msg={carErrors.state?.message} />
                 </div>
                 <div className="space-y-1">
-                  <Label>Annual Mileage</Label>
-                  <Input type="number" {...register("annualMileage", { valueAsNumber: true })} placeholder="12000" />
+                  <Label className="text-gray-300">Annual Mileage</Label>
+                  <Input type="number" {...register("annualMileage", { valueAsNumber: true })} placeholder="12000" className={inputCls} />
                   <FieldError msg={carErrors.annualMileage?.message} />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <Label>{fuelType === "electric" ? "Efficiency (mi/kWh)" : "Fuel Economy (MPG)"}</Label>
+                  <Label className="text-gray-300">{fuelType === "electric" ? "Efficiency (mi/kWh)" : "Fuel Economy (MPG)"}</Label>
                   <div className="flex gap-2">
-                    <Input type="number" step="0.1" {...register("mpg", { valueAsNumber: true })} className="flex-1" />
-                    <Button
+                    <Input type="number" step="0.1" {...register("mpg", { valueAsNumber: true })} className={`flex-1 ${inputCls}`} />
+                    <button
                       type="button"
-                      variant="outline"
-                      size="sm"
                       onClick={handleEpaLookup}
                       disabled={epaLoading || !watch("make") || !watch("model")}
-                      className="whitespace-nowrap px-2 text-xs"
+                      className="whitespace-nowrap px-2 py-1 rounded-md text-xs font-medium transition-colors disabled:opacity-40"
+                      style={{ backgroundColor: "#00d4ff", color: "#0d0d2b" }}
                     >
                       {epaLoading ? "…" : "EPA"}
-                    </Button>
+                    </button>
                   </div>
-                  {epaMpgInfo && <p className="text-xs text-muted-foreground">{epaMpgInfo}</p>}
+                  {epaMpgInfo && <p className="text-xs text-gray-400">{epaMpgInfo}</p>}
                   <FieldError msg={carErrors.mpg?.message} />
                 </div>
                 <div className="space-y-1">
-                  <Label>{fuelType === "electric" ? "Electricity ($/kWh)" : "Fuel Price ($/gal)"}</Label>
-                  <Input type="number" step="0.01" {...register("fuelPricePerUnit", { valueAsNumber: true })} />
+                  <Label className="text-gray-300">{fuelType === "electric" ? "Electricity ($/kWh)" : "Fuel Price ($/gal)"}</Label>
+                  <Input type="number" step="0.01" {...register("fuelPricePerUnit", { valueAsNumber: true })} className={inputCls} />
                   <FieldError msg={carErrors.fuelPricePerUnit?.message} />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <Label>Purchase Price ($)</Label>
+                <Label className="text-gray-300">Purchase Price ($)</Label>
                 <Input
                   type="number"
+                  className={inputCls}
                   {...register("purchasePrice", {
                     valueAsNumber: true,
                     onChange: (e) => {
@@ -386,14 +392,15 @@ export function ItemEntryForm({ onSubmit, defaultValues }: ItemEntryFormProps) {
           {/* ── Financing section ── */}
           {section === "financing" && (
             <>
-              <div className="rounded-md bg-muted/40 px-4 py-2 text-sm text-muted-foreground mb-2">
-                Purchase price: <span className="font-medium text-foreground">${purchasePrice?.toLocaleString() ?? 0}</span>
+              <div className="rounded-lg px-4 py-2 text-sm text-gray-400 mb-2 border border-white/8" style={{ backgroundColor: "rgba(255,255,255,0.04)" }}>
+                Purchase price: <span className="font-medium text-white">${purchasePrice?.toLocaleString() ?? 0}</span>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <Label>Down Payment ($)</Label>
+                  <Label className="text-gray-300">Down Payment ($)</Label>
                   <Input
                     type="number"
+                    className={inputCls}
                     {...register("downPayment", {
                       valueAsNumber: true,
                       onChange: (e) => {
@@ -407,20 +414,20 @@ export function ItemEntryForm({ onSubmit, defaultValues }: ItemEntryFormProps) {
                   <FieldError msg={carErrors.downPayment?.message} />
                 </div>
                 <div className="space-y-1">
-                  <Label>Loan Amount ($)</Label>
-                  <Input type="number" {...register("loanAmount", { valueAsNumber: true })} readOnly />
+                  <Label className="text-gray-300">Loan Amount ($)</Label>
+                  <Input type="number" {...register("loanAmount", { valueAsNumber: true })} readOnly className={`${inputCls} opacity-70 cursor-not-allowed`} />
                   <FieldError msg={carErrors.loanAmount?.message} />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <Label>Interest Rate (% APR)</Label>
-                  <Input type="number" step="0.1" {...register("loanInterestRate", { valueAsNumber: true })} placeholder="6.5" />
+                  <Label className="text-gray-300">Interest Rate (% APR)</Label>
+                  <Input type="number" step="0.1" {...register("loanInterestRate", { valueAsNumber: true })} placeholder="6.5" className={inputCls} />
                   <FieldError msg={carErrors.loanInterestRate?.message} />
                 </div>
                 <div className="space-y-1">
-                  <Label>Loan Term (months)</Label>
+                  <Label className="text-gray-300">Loan Term (months)</Label>
                   <Controller
                     name="loanTermMonths"
                     control={control}
@@ -447,24 +454,24 @@ export function ItemEntryForm({ onSubmit, defaultValues }: ItemEntryFormProps) {
             <>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <Label>Insurance ($/month)</Label>
-                  <Input type="number" {...register("insuranceMonthly", { valueAsNumber: true })} placeholder="150" />
+                  <Label className="text-gray-300">Insurance ($/month)</Label>
+                  <Input type="number" {...register("insuranceMonthly", { valueAsNumber: true })} placeholder="150" className={inputCls} />
                   <FieldError msg={carErrors.insuranceMonthly?.message} />
                 </div>
                 <div className="space-y-1">
-                  <Label>Registration & Taxes ($/year)</Label>
-                  <Input type="number" {...register("registrationAnnual", { valueAsNumber: true })} placeholder="250" />
+                  <Label className="text-gray-300">Registration & Taxes ($/year)</Label>
+                  <Input type="number" {...register("registrationAnnual", { valueAsNumber: true })} placeholder="250" className={inputCls} />
                   <FieldError msg={carErrors.registrationAnnual?.message} />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <Label>Parking & Tolls ($/month)</Label>
-                <Input type="number" {...register("parkingMonthly", { valueAsNumber: true })} placeholder="0" />
+                <Label className="text-gray-300">Parking & Tolls ($/month)</Label>
+                <Input type="number" {...register("parkingMonthly", { valueAsNumber: true })} placeholder="0" className={inputCls} />
                 <FieldError msg={carErrors.parkingMonthly?.message} />
               </div>
 
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-gray-500">
                 Maintenance cost is estimated automatically based on vehicle age. You can log actual expenses after calculating.
               </p>
             </>
@@ -472,31 +479,36 @@ export function ItemEntryForm({ onSubmit, defaultValues }: ItemEntryFormProps) {
 
           <div className="flex gap-2 pt-2">
             {section !== "vehicle" && (
-              <Button
+              <button
                 type="button"
-                variant="outline"
-                className="flex-1"
+                className="flex-1 h-9 rounded-md text-sm font-medium border transition-colors text-gray-300 hover:text-white"
+                style={{ borderColor: "rgba(255,255,255,0.2)", backgroundColor: "transparent" }}
                 onClick={() => setSection(section === "running" ? "financing" : "vehicle")}
               >
                 Back
-              </Button>
+              </button>
             )}
             {section !== "running" ? (
-              <Button
+              <button
                 type="button"
-                className="flex-1"
+                className="flex-1 h-9 rounded-md text-sm font-bold transition-colors"
+                style={{ background: "linear-gradient(90deg, #00d4ff, #7c3aed)", color: "#fff" }}
                 onClick={() => setSection(section === "vehicle" ? "financing" : "running")}
               >
                 Next
-              </Button>
+              </button>
             ) : (
-              <Button type="submit" className="flex-1">
+              <button
+                type="submit"
+                className="flex-1 h-9 rounded-md text-sm font-bold transition-colors"
+                style={{ background: "linear-gradient(90deg, #00d4ff, #7c3aed)", color: "#fff" }}
+              >
                 Calculate Costs
-              </Button>
+              </button>
             )}
           </div>
         </form>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
