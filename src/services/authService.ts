@@ -52,3 +52,4 @@ export const AuthService = {
     if (error) throw error;
   },
 };
+
