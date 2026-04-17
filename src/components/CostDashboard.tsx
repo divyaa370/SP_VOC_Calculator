@@ -17,6 +17,7 @@ import {
   computeScoreFactors,
   scoreTotalFromFactors,
   scoreToLabel,
+  scoreToGrade,
   scoreToHex,
 } from "../lib/sustainabilityScore";
 import { Leaf, DollarSign, Wrench, Shield, TrendingDown } from "lucide-react";
@@ -194,6 +195,7 @@ const TD = "px-3 py-3 text-sm";
 
 export function CostDashboard({ item, onReset, initialProjectionYears }: CostDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabId>("cost-overview");
+  const [projectionYears, setProjectionYears] = useState(initialProjectionYears ?? 5);
   const liveData = useLiveData();
 
   const liveRates: LiveRates = {
@@ -205,7 +207,7 @@ export function CostDashboard({ item, onReset, initialProjectionYears }: CostDas
   const costs = computeMonthlyCosts(item, liveRates);
   const car = item.category === "car" ? (item as CarFormData) : null;
   const segment = car ? getDepreciationSegment(car.make, car.fuelType) : "midsize";
-  const projectionData = buildYearlyProjection(costs, item, initialProjectionYears ?? 5);
+  const projectionData = buildYearlyProjection(costs, item, projectionYears);
 
   // Summary values
   const monthlyAll = Object.values(costs).reduce((a, b) => a + b, 0);
@@ -382,13 +384,30 @@ export function CostDashboard({ item, onReset, initialProjectionYears }: CostDas
 
       {/* ── Compounding Cost of Ownership Chart ── */}
       <div className="rounded-2xl border p-5" style={{ backgroundColor: "#1e1e3f", borderColor: "rgba(255,255,255,0.08)" }}>
-        <div className="flex items-center gap-2 mb-1">
-          <TrendingDown className="w-4 h-4 text-[#00d4ff]" />
-          <h2 className="text-sm font-semibold text-white">Compounding Cost of Ownership</h2>
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2">
+            <TrendingDown className="w-4 h-4 text-[#00d4ff]" />
+            <h2 className="text-sm font-semibold text-white">Compounding Cost of Ownership</h2>
+          </div>
+          <span className="text-xs font-semibold text-[#00d4ff]">{projectionYears} yr</span>
         </div>
-        <p className="text-xs text-gray-400 mb-4">
-          Cumulative spend vs. remaining vehicle value over {projectionData.length} years
+        <p className="text-xs text-gray-400 mb-3">
+          Cumulative spend vs. remaining vehicle value
         </p>
+        {/* Year slider */}
+        <div className="flex items-center gap-3 mb-4">
+          <span className="text-xs text-gray-500 w-4">1</span>
+          <input
+            type="range"
+            min={1}
+            max={15}
+            value={projectionYears}
+            onChange={(e) => setProjectionYears(Number(e.target.value))}
+            className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer"
+            style={{ accentColor: "#00d4ff", backgroundColor: "rgba(255,255,255,0.1)" }}
+          />
+          <span className="text-xs text-gray-500 w-5">15</span>
+        </div>
         <ResponsiveContainer width="100%" height={240}>
           <AreaChart data={projectionData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
             <defs>
@@ -448,9 +467,16 @@ export function CostDashboard({ item, onReset, initialProjectionYears }: CostDas
 
         {/* Score display */}
         <div className="flex items-end justify-between mb-3">
-          <div className="flex items-baseline gap-1">
+          <div className="flex items-baseline gap-2">
             <span className="text-6xl font-black" style={{ color: sustainScoreColor }}>{sustainScore}</span>
             <span className="text-xl text-gray-500 mb-1">/ 100</span>
+            {/* Letter grade badge */}
+            <span
+              className="mb-1 px-2.5 py-0.5 rounded-lg text-2xl font-black"
+              style={{ backgroundColor: `${sustainScoreColor}22`, color: sustainScoreColor, border: `1px solid ${sustainScoreColor}55` }}
+            >
+              {scoreToGrade(sustainScore)}
+            </span>
           </div>
           <div className="text-right">
             <p className="text-sm font-bold tracking-widest" style={{ color: sustainScoreColor }}>{sustainLabelUpper}</p>
