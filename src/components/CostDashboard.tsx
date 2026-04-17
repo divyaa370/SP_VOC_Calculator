@@ -463,7 +463,7 @@ export function CostDashboard({ item, onReset, initialProjectionYears }: CostDas
           <Leaf className="w-4 h-4 text-green-400" />
           <h2 className="text-sm font-semibold text-white">Financial Sustainability Score</h2>
         </div>
-        <p className="text-xs text-gray-400 mb-5">environmental impact (35%) · financial burden (25%) · maintenance (20%) · insurance (10%) · service reliability (10%)</p>
+        <p className="text-xs text-gray-400 mb-5">financial burden (35%) · maintenance (25%) · insurance (20%) · service reliability (10%) · environmental impact (10%)</p>
 
         {/* Score display */}
         <div className="flex items-end justify-between mb-3">
@@ -506,19 +506,19 @@ export function CostDashboard({ item, onReset, initialProjectionYears }: CostDas
         {/* Score Factors */}
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Score Factors:</p>
         <div className="space-y-3">
-          <FactorBar label="Environmental Impact" weight="35%" score={environmentalImpact} color={scoreToHex(environmentalImpact)} />
-          <FactorBar label="Financial Burden"     weight="25%" score={financialBurden}     color={scoreToHex(financialBurden)} />
-          <FactorBar label="Maintenance Cost"     weight="20%" score={maintenance}          color={scoreToHex(maintenance)} />
-          <FactorBar label="Insurance Burden"     weight="10%" score={insurance}            color={scoreToHex(insurance)} />
+          <FactorBar label="Financial Burden"     weight="35%" score={financialBurden}     color={scoreToHex(financialBurden)} />
+          <FactorBar label="Maintenance Cost"     weight="25%" score={maintenance}          color={scoreToHex(maintenance)} />
+          <FactorBar label="Insurance Burden"     weight="20%" score={insurance}            color={scoreToHex(insurance)} />
           <FactorBar label="Service Reliability"  weight="10%" score={serviceReliability}   color={scoreToHex(serviceReliability)} />
+          <FactorBar label="Environmental Impact" weight="10%" score={environmentalImpact} color={scoreToHex(environmentalImpact)} />
         </div>
         {/* Weighted breakdown */}
         <div className="mt-4 pt-3 border-t text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-          <span>{environmentalImpact} × 0.35 = {(environmentalImpact * 0.35).toFixed(1)}</span>
-          <span>{financialBurden} × 0.25 = {(financialBurden * 0.25).toFixed(1)}</span>
-          <span>{maintenance} × 0.20 = {(maintenance * 0.20).toFixed(1)}</span>
-          <span>{insurance} × 0.10 = {(insurance * 0.10).toFixed(1)}</span>
+          <span>{financialBurden} × 0.35 = {(financialBurden * 0.35).toFixed(1)}</span>
+          <span>{maintenance} × 0.25 = {(maintenance * 0.25).toFixed(1)}</span>
+          <span>{insurance} × 0.20 = {(insurance * 0.20).toFixed(1)}</span>
           <span>{serviceReliability} × 0.10 = {(serviceReliability * 0.10).toFixed(1)}</span>
+          <span>{environmentalImpact} × 0.10 = {(environmentalImpact * 0.10).toFixed(1)}</span>
           <span className="text-gray-300 font-medium">= {sustainScore} total</span>
         </div>
       </div>

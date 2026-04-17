@@ -12,16 +12,16 @@ export interface CostSnapshot {
 // ── Factor scores (0–100 each) ────────────────────────────────────────────
 
 export interface ScoreFactors {
-  /** 35% weight — tailpipe emissions, fuel type, MPG efficiency */
-  environmentalImpact: number;
-  /** 25% weight — how affordable is the all-in monthly cost */
+  /** 35% weight — how affordable is the all-in monthly cost */
   financialBurden: number;
-  /** 20% weight — how low/predictable are maintenance costs */
+  /** 25% weight — how low/predictable are maintenance costs */
   maintenance: number;
-  /** 10% weight — how reasonable is the insurance premium */
+  /** 20% weight — how reasonable is the insurance premium */
   insurance: number;
   /** 10% weight — fuel-type mechanical reliability + mileage */
   serviceReliability: number;
+  /** 10% weight — tailpipe emissions, fuel type, MPG efficiency */
+  environmentalImpact: number;
 }
 
 function clamp(v: number, min: number, max: number) {
@@ -31,11 +31,11 @@ function clamp(v: number, min: number, max: number) {
 /**
  * Compute all five factor scores from item + cost data.
  *
- *  Financial Burden    — excellent ≤$400/mo,  poor ≥$1,200/mo
- *  Maintenance         — excellent ≤$600/yr,  poor ≥$2,800/yr
- *  Insurance           — excellent ≤$80/mo,   poor ≥$380/mo
- *  Service Reliability — fuel-type base ± mileage (fewer parts = more reliable)
- *  Environmental Impact— fuel type emissions base + mileage penalty + MPG bonus
+ *  Financial Burden     35% — excellent ≤$400/mo,  poor ≥$1,200/mo
+ *  Maintenance         25% — excellent ≤$600/yr,  poor ≥$2,800/yr
+ *  Insurance           20% — excellent ≤$80/mo,   poor ≥$380/mo
+ *  Service Reliability 10% — fuel-type base ± mileage (fewer parts = more reliable)
+ *  Environmental Impact 10% — fuel type emissions base + mileage penalty + MPG bonus
  *    electric=95, hybrid=72, gasoline=40, diesel=25
  *    every 1k mi above/below 12k = ∓2 pts (±10 max)
  *    gasoline/hybrid MPG bonus: (mpg−25)/5 × 3, clamped ±6 pts
@@ -92,19 +92,19 @@ export function computeScoreFactors(
 
 /**
  * Weighted average of all five factors → final 0–100 score.
- *   Environmental Impact 35%  ← primary sustainability dimension
- *   Financial Burden     25%
- *   Maintenance          20%
- *   Insurance            10%
+ *   Financial Burden     35%
+ *   Maintenance          25%
+ *   Insurance            20%
  *   Service Reliability  10%
+ *   Environmental Impact 10%
  */
 export function scoreTotalFromFactors(f: ScoreFactors): number {
   return Math.round(
-    f.environmentalImpact * 0.35 +
-    f.financialBurden     * 0.25 +
-    f.maintenance         * 0.20 +
-    f.insurance           * 0.10 +
-    f.serviceReliability  * 0.10,
+    f.financialBurden     * 0.35 +
+    f.maintenance         * 0.25 +
+    f.insurance           * 0.20 +
+    f.serviceReliability  * 0.10 +
+    f.environmentalImpact * 0.10,
   );
 }
 
