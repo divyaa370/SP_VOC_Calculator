@@ -112,7 +112,7 @@ export function ExpenseLogPage() {
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-semibold text-white">Expense Log</h1>
             <div className="flex gap-2 items-center">
-              <button className="text-sm text-gray-400 hover:text-[#00d4ff] transition-colors" onClick={() => navigate("/")}>Back</button>
+              <button className="text-sm text-white hover:text-[#00d4ff] transition-colors" onClick={() => navigate("/")}>Back</button>
               <button
                 onClick={() => setShowForm(!showForm)}
                 className="text-sm px-3 py-1.5 rounded-lg font-medium transition-colors"

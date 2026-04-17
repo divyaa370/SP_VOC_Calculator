@@ -52,7 +52,7 @@ export function SearchHistoryPage() {
         <div className="w-full max-w-2xl mx-auto space-y-4">
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-semibold">Search History</h1>
-            <button className="text-sm underline text-muted-foreground" onClick={() => navigate("/")}>
+            <button className="text-sm text-white hover:text-[#00d4ff] transition-colors" onClick={() => navigate("/")}>
               Back to calculator
             </button>
           </div>

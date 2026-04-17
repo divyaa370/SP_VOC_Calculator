@@ -125,7 +125,7 @@ export function ComparisonMode({ userId: _userId }: ComparisonModeProps) {
       <div className="w-full max-w-lg mx-auto space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold text-white">Compare — Vehicle A</h2>
-          <button className="text-sm text-gray-400 hover:text-[#00d4ff] transition-colors" onClick={() => navigate("/")}>Back</button>
+          <button className="text-sm text-white hover:text-[#00d4ff] transition-colors" onClick={() => navigate("/")}>Back</button>
         </div>
         <ItemEntryForm onSubmit={handleSubmitA} />
       </div>
@@ -137,7 +137,7 @@ export function ComparisonMode({ userId: _userId }: ComparisonModeProps) {
       <div className="w-full max-w-lg mx-auto space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold text-white">Compare — Vehicle B</h2>
-          <button className="text-sm text-gray-400 hover:text-[#00d4ff] transition-colors" onClick={reset}>Start over</button>
+          <button className="text-sm text-white hover:text-[#00d4ff] transition-colors" onClick={reset}>Start over</button>
         </div>
         <p className="text-sm text-gray-400">
           Vehicle A: <span className="font-medium text-white">{itemA ? itemLabel(itemA) : ""}</span>
@@ -172,7 +172,7 @@ export function ComparisonMode({ userId: _userId }: ComparisonModeProps) {
     <div className="w-full max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-white">Comparison Results</h2>
-        <button className="text-sm text-gray-400 hover:text-[#00d4ff] transition-colors" onClick={reset}>Compare again</button>
+        <button className="text-sm text-white hover:text-[#00d4ff] transition-colors" onClick={reset}>Compare again</button>
       </div>
 
       {/* Summary cards */}

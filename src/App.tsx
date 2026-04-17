@@ -89,7 +89,7 @@ function SavedAnalysesPage() {
         <div className="w-full max-w-2xl mx-auto space-y-4">
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-semibold text-white">Saved Analyses</h1>
-            <Link to="/" className="text-sm underline text-muted-foreground">Back to calculator</Link>
+            <Link to="/" className="text-sm text-white hover:text-[#00d4ff] transition-colors">Back to calculator</Link>
           </div>
           <SavedAnalyses
             analyses={analyses}
@@ -128,7 +128,7 @@ function App() {
                   <div className="w-screen min-h-screen flex flex-col">
                     <header className="flex items-center justify-between px-6 py-4 border-b">
                       <Link to="/" className="font-semibold text-white">TrueCost</Link>
-                      <Link to="/" className="text-sm text-muted-foreground underline">Back</Link>
+                      <Link to="/" className="text-sm text-white hover:text-[#00d4ff] transition-colors">Back</Link>
                     </header>
                     <main className="flex-1 p-6">
                       <div className="w-full max-w-xl mx-auto space-y-4">

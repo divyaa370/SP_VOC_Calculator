@@ -55,7 +55,7 @@ export function ResultsDashboard({ item, onReset, initialProjectionYears }: Resu
         {/* Left: Back to Search */}
         <button
           onClick={onReset}
-          className="flex items-center gap-2 text-sm text-gray-400 hover:text-[#00d4ff] transition-colors px-3 py-2 rounded-lg border border-white/10 hover:border-[#00d4ff]/40"
+          className="flex items-center gap-2 text-sm text-white hover:text-[#00d4ff] transition-colors px-3 py-2 rounded-lg border border-white/20 hover:border-[#00d4ff]/40"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Search

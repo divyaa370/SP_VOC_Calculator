@@ -1,4 +1,7 @@
 import { useState } from "react";
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+} from "recharts";
 import type { ItemFormData, CarFormData } from "./ItemEntryForm";
 import {
   computeMonthlyLoanPayment,
@@ -384,6 +387,63 @@ export function CostDashboard({ item, onReset, initialProjectionYears }: CostDas
           <p className="text-2xl font-bold text-pink-400">{fmt(fiveYearTotal)}</p>
           <p className="text-xs text-gray-500 mt-0.5">cumulative ownership</p>
         </div>
+      </div>
+
+      {/* ── Compounding Cost of Ownership Chart ── */}
+      <div className="rounded-2xl border p-5" style={{ backgroundColor: "#1e1e3f", borderColor: "rgba(255,255,255,0.08)" }}>
+        <div className="flex items-center gap-2 mb-1">
+          <TrendingDown className="w-4 h-4 text-[#00d4ff]" />
+          <h2 className="text-sm font-semibold text-white">Compounding Cost of Ownership</h2>
+        </div>
+        <p className="text-xs text-gray-400 mb-4">
+          Cumulative spend vs. remaining vehicle value over {projectionData.length} years
+        </p>
+        <ResponsiveContainer width="100%" height={240}>
+          <AreaChart data={projectionData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="gradCost" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#00d4ff" stopOpacity={0.25} />
+                <stop offset="95%" stopColor="#00d4ff" stopOpacity={0.02} />
+              </linearGradient>
+              <linearGradient id="gradValue" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#22c55e" stopOpacity={0.25} />
+                <stop offset="95%" stopColor="#22c55e" stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+            <XAxis dataKey="year" stroke="#6b7280" tick={{ fill: "#9ca3af", fontSize: 12 }} />
+            <YAxis
+              tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+              stroke="#6b7280"
+              tick={{ fill: "#9ca3af", fontSize: 12 }}
+              width={52}
+            />
+            <Tooltip
+              contentStyle={{ backgroundColor: "#1e1e3f", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#fff" }}
+              formatter={(v: number) => [fmt(v), ""]}
+            />
+            <Legend wrapperStyle={{ color: "#9ca3af", paddingTop: 8, fontSize: 12 }} />
+            <Area
+              type="monotone"
+              dataKey="Cumulative Cost"
+              stroke="#00d4ff"
+              strokeWidth={2}
+              fill="url(#gradCost)"
+              dot={{ fill: "#00d4ff", r: 4, strokeWidth: 0 }}
+            />
+            {car && (
+              <Area
+                type="monotone"
+                dataKey="Vehicle Value"
+                stroke="#22c55e"
+                strokeWidth={2}
+                strokeDasharray="5 3"
+                fill="url(#gradValue)"
+                dot={{ fill: "#22c55e", r: 4, strokeWidth: 0 }}
+              />
+            )}
+          </AreaChart>
+        </ResponsiveContainer>
       </div>
 
       {/* ── Financial Sustainability Score ── */}
