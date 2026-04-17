@@ -5,10 +5,8 @@ import { z } from "zod";
 import { useNavigate, Link, Navigate } from "react-router-dom";
 import { AuthService } from "../../services/authService";
 import { useAuth } from "../../context/AuthContext";
-import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Spinner } from "../ui/Spinner";
 
 const LOCKOUT_ATTEMPTS = 3;
@@ -21,17 +19,17 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
+const inputCls = "bg-[#2a2a5a] border-white/15 text-white placeholder:text-gray-500 focus-visible:ring-[#00d4ff]";
+
 export function SignInForm() {
   const navigate = useNavigate();
   const { user, loading: authLoading, enterGuestMode } = useAuth();
   const [serverError, setServerError] = useState("");
   const [loading, setLoading] = useState(false);
-  // Rate limiting: tracked in component state only — resets on page load (intentional).
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [lockedUntil, setLockedUntil] = useState<number | null>(null);
   const [lockSecondsLeft, setLockSecondsLeft] = useState(0);
 
-  // Countdown ticker for the lockout display
   useEffect(() => {
     if (!lockedUntil) return;
     const tick = () => {
@@ -53,10 +51,7 @@ export function SignInForm() {
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
   if (authLoading) return <Spinner />;
-
-  if (user) {
-    return <Navigate to="/" replace />;
-  }
+  if (user) return <Navigate to="/" replace />;
 
   const onSubmit = async (data: FormData) => {
     if (isLocked) return;
@@ -65,8 +60,6 @@ export function SignInForm() {
     try {
       await AuthService.signIn(data);
       setFailedAttempts(0);
-      // Don't navigate here — wait for onAuthStateChange to update the context,
-      // then the if (user) guard above will redirect automatically.
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "";
       setServerError(
@@ -83,72 +76,67 @@ export function SignInForm() {
   };
 
   return (
-    <div className="flex items-center justify-center w-screen h-screen bg-background">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Sign in</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="space-y-1">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" {...register("email")} autoComplete="email" maxLength={254} />
-              {errors.email && (
-                <p className="text-sm text-destructive">{errors.email.message}</p>
-              )}
-            </div>
+    <div className="flex items-center justify-center w-screen h-screen" style={{ backgroundColor: "#13132b" }}>
+      <div className="w-full max-w-md rounded-2xl border p-8 space-y-6" style={{ backgroundColor: "#1e1e3f", borderColor: "rgba(255,255,255,0.08)" }}>
+        {/* Logo */}
+        <div className="text-center space-y-1">
+          <h1 className="text-2xl font-black tracking-tight text-white">TrueCost</h1>
+          <p className="text-sm text-gray-400">Sign in to your account</p>
+        </div>
 
-            <div className="space-y-1">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                {...register("password")}
-                autoComplete="current-password"
-                maxLength={128}
-              />
-              {errors.password && (
-                <p className="text-sm text-destructive">{errors.password.message}</p>
-              )}
-            </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="space-y-1">
+            <Label htmlFor="email" className="text-sm text-gray-300">Email</Label>
+            <Input id="email" type="email" {...register("email")} autoComplete="email" maxLength={254} className={inputCls} />
+            {errors.email && <p className="text-sm text-red-400">{errors.email.message}</p>}
+          </div>
 
-            {serverError && !isLocked && (
-              <p className="text-sm text-destructive">{serverError}</p>
-            )}
-            {isLocked && (
-              <p className="text-sm text-destructive">
-                Too many failed attempts. Try again in {lockSecondsLeft}s.
-              </p>
-            )}
+          <div className="space-y-1">
+            <Label htmlFor="password" className="text-sm text-gray-300">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              {...register("password")}
+              autoComplete="current-password"
+              maxLength={128}
+              className={inputCls}
+            />
+            {errors.password && <p className="text-sm text-red-400">{errors.password.message}</p>}
+          </div>
 
-            <Button type="submit" className="w-full" disabled={loading || isLocked}>
-              {loading ? "Signing in..." : isLocked ? `Locked (${lockSecondsLeft}s)` : "Sign In"}
-            </Button>
+          {serverError && !isLocked && <p className="text-sm text-red-400">{serverError}</p>}
+          {isLocked && (
+            <p className="text-sm text-amber-400">Too many failed attempts. Try again in {lockSecondsLeft}s.</p>
+          )}
 
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={() => { enterGuestMode(); navigate("/"); }}
-            >
-              Continue as Guest
-            </Button>
+          <button
+            type="submit"
+            disabled={loading || isLocked}
+            className="w-full py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+            style={{ background: "linear-gradient(90deg,#00d4ff,#7c3aed)" }}
+          >
+            {loading ? "Signing in..." : isLocked ? `Locked (${lockSecondsLeft}s)` : "Sign In"}
+          </button>
 
-            <p className="text-sm text-center text-muted-foreground">
-              Don't have an account?{" "}
-              <Link to="/signup" className="underline">
-                Sign up
-              </Link>
-            </p>
+          <button
+            type="button"
+            className="w-full py-2.5 rounded-lg text-sm font-semibold text-white border transition-colors hover:bg-white/5"
+            style={{ borderColor: "rgba(255,255,255,0.15)" }}
+            onClick={() => { enterGuestMode(); navigate("/"); }}
+          >
+            Continue as Guest
+          </button>
 
-            <p className="text-sm text-center">
-              <Link to="/reset-password" className="underline text-muted-foreground">
-                Forgot password?
-              </Link>
-            </p>
-          </form>
-        </CardContent>
-      </Card>
+          <p className="text-sm text-center text-gray-400">
+            Don't have an account?{" "}
+            <Link to="/signup" className="text-[#00d4ff] hover:underline">Sign up</Link>
+          </p>
+
+          <p className="text-sm text-center">
+            <Link to="/reset-password" className="text-gray-500 hover:text-gray-300 underline">Forgot password?</Link>
+          </p>
+        </form>
+      </div>
     </div>
   );
 }

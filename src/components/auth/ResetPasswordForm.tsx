@@ -5,10 +5,8 @@ import { z } from "zod";
 import { useNavigate, Link } from "react-router-dom";
 import { AuthService } from "../../services/authService";
 import { useAuth } from "../../context/AuthContext";
-import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 
 const schema = z
   .object({
@@ -25,6 +23,8 @@ const schema = z
   });
 
 type FormData = z.infer<typeof schema>;
+
+const inputCls = "bg-[#2a2a5a] border-white/15 text-white placeholder:text-gray-500 focus-visible:ring-[#00d4ff]";
 
 export function ResetPasswordForm() {
   const navigate = useNavigate();
@@ -60,74 +60,74 @@ export function ResetPasswordForm() {
 
   if (sessionLoading) {
     return (
-      <div className="flex items-center justify-center w-screen h-screen">
-        <p className="text-muted-foreground">Validating reset link...</p>
+      <div className="flex items-center justify-center w-screen h-screen" style={{ backgroundColor: "#13132b" }}>
+        <p className="text-gray-400">Validating reset link...</p>
       </div>
     );
   }
 
   if (tokenInvalid) {
     return (
-      <div className="flex items-center justify-center w-screen h-screen bg-background">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Link expired or invalid</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 text-center">
-            <p className="text-sm text-muted-foreground">
-              This password reset link has expired or is no longer valid.
-            </p>
-            <Link to="/reset-password" className="text-sm underline">
-              Request a new reset link
-            </Link>
-          </CardContent>
-        </Card>
+      <div className="flex items-center justify-center w-screen h-screen" style={{ backgroundColor: "#13132b" }}>
+        <div className="w-full max-w-md rounded-2xl border p-8 space-y-4 text-center" style={{ backgroundColor: "#1e1e3f", borderColor: "rgba(255,255,255,0.08)" }}>
+          <h1 className="text-2xl font-black tracking-tight text-white">TrueCost</h1>
+          <p className="text-sm font-semibold text-white">Link expired or invalid</p>
+          <p className="text-sm text-gray-400">
+            This password reset link has expired or is no longer valid.
+          </p>
+          <Link to="/reset-password" className="text-sm text-[#00d4ff] hover:underline">
+            Request a new reset link
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex items-center justify-center w-screen h-screen bg-background">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Set a new password</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="space-y-1">
-              <Label htmlFor="password">New password</Label>
-              <Input
-                id="password"
-                type="password"
-                {...register("password")}
-                autoComplete="new-password"
-              />
-              {errors.password && (
-                <p className="text-sm text-destructive">{errors.password.message}</p>
-              )}
-            </div>
+    <div className="flex items-center justify-center w-screen h-screen" style={{ backgroundColor: "#13132b" }}>
+      <div className="w-full max-w-md rounded-2xl border p-8 space-y-6" style={{ backgroundColor: "#1e1e3f", borderColor: "rgba(255,255,255,0.08)" }}>
+        <div className="text-center space-y-1">
+          <h1 className="text-2xl font-black tracking-tight text-white">TrueCost</h1>
+          <p className="text-sm text-gray-400">Set a new password</p>
+        </div>
 
-            <div className="space-y-1">
-              <Label htmlFor="confirmPassword">Confirm new password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                {...register("confirmPassword")}
-                autoComplete="new-password"
-              />
-              {errors.confirmPassword && (
-                <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
-              )}
-            </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="space-y-1">
+            <Label htmlFor="password" className="text-sm text-gray-300">New password</Label>
+            <Input
+              id="password"
+              type="password"
+              {...register("password")}
+              autoComplete="new-password"
+              className={inputCls}
+            />
+            {errors.password && <p className="text-sm text-red-400">{errors.password.message}</p>}
+          </div>
 
-            {serverError && <p className="text-sm text-destructive">{serverError}</p>}
+          <div className="space-y-1">
+            <Label htmlFor="confirmPassword" className="text-sm text-gray-300">Confirm new password</Label>
+            <Input
+              id="confirmPassword"
+              type="password"
+              {...register("confirmPassword")}
+              autoComplete="new-password"
+              className={inputCls}
+            />
+            {errors.confirmPassword && <p className="text-sm text-red-400">{errors.confirmPassword.message}</p>}
+          </div>
 
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Updating..." : "Update password"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+          {serverError && <p className="text-sm text-red-400">{serverError}</p>}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+            style={{ background: "linear-gradient(90deg,#00d4ff,#7c3aed)" }}
+          >
+            {loading ? "Updating..." : "Update password"}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
