@@ -4,10 +4,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuth } from "../../context/AuthContext";
 import { getUserProfile, saveUserProfile } from "../../lib/auth";
-import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 
 // ── US States ──────────────────────────────────────────────────────────────
 
@@ -20,7 +18,6 @@ const US_STATES = [
 
 // ── Schema ─────────────────────────────────────────────────────────────────
 
-// All number fields come in as strings from inputs; we coerce then allow undefined.
 const num = (min = 0) =>
   z.preprocess(
     (v) => (v === "" || v === null || v === undefined ? undefined : Number(v)),
@@ -28,10 +25,8 @@ const num = (min = 0) =>
   );
 
 const profileSchema = z.object({
-  // Identity
   displayName: z.string().max(100).optional(),
   annualIncome: num(0),
-  // Commute
   homeAddress: z.string().max(200).optional(),
   workAddress: z.string().max(200).optional(),
   commuteDaysPerWeek: z.preprocess(
@@ -39,14 +34,11 @@ const profileSchema = z.object({
     z.number().int().min(1).max(7).optional()
   ),
   oneWayCommuteMiles: num(0),
-  // Fuel & driving
   preferredFuelPrice: num(0),
   electricityRate: num(0),
   drivingStyle: z.enum(["city", "mixed", "highway"]).optional(),
-  // Insurance
   monthlyInsurancePremium: num(0),
   stateOfRegistration: z.string().optional(),
-  // Vehicle defaults
   ownershipHorizonYears: z.preprocess(
     (v) => (v === "" || v === null || v === undefined ? undefined : Number(v)),
     z.number().int().min(1).max(15).optional()
@@ -55,14 +47,15 @@ const profileSchema = z.object({
 
 type ProfileFormData = z.infer<typeof profileSchema>;
 
-// ── Helpers ────────────────────────────────────────────────────────────────
+// ── Styles ─────────────────────────────────────────────────────────────────
 
+const inputCls = "bg-[#2a2a5a] border-white/15 text-white placeholder:text-gray-500 focus-visible:ring-[#00d4ff]";
 const selectCls =
-  "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
+  "flex h-9 w-full rounded-md border px-3 py-1 text-sm bg-[#2a2a5a] text-white border-white/15 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#00d4ff] disabled:opacity-50";
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground pt-2 pb-1 border-b mb-1">
+    <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 pt-2 pb-1 border-b border-white/10 mb-1">
       {children}
     </p>
   );
@@ -74,7 +67,6 @@ export function UserProfileForm() {
   const { user } = useAuth();
   const [saved, setSaved] = useState(false);
 
-  // Load existing profile as default values
   const existing = user?.id ? getUserProfile(user.id) : null;
 
   const {
@@ -109,166 +101,123 @@ export function UserProfileForm() {
   const err = errors as Partial<Record<keyof ProfileFormData, { message?: string }>>;
 
   return (
-    <Card className="w-full max-w-xl">
-      <CardHeader>
-        <CardTitle>Profile</CardTitle>
-        <p className="text-sm text-muted-foreground">
+    <div
+      className="w-full max-w-xl rounded-2xl border p-6 space-y-4"
+      style={{ backgroundColor: "#1e1e3f", borderColor: "rgba(255,255,255,0.08)" }}
+    >
+      <div>
+        <h3 className="text-base font-semibold text-white">Profile</h3>
+        <p className="text-sm text-gray-400 mt-0.5">
           Optional — fills in calculator defaults automatically.
         </p>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+      </div>
 
-          {/* ── Identity ── */}
-          <SectionHeading>Identity</SectionHeading>
+      <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <Label>Display name</Label>
-              <Input placeholder="Jane Smith" {...register("displayName")} />
-              {err.displayName && <p className="text-xs text-destructive">{err.displayName.message}</p>}
-            </div>
-            <div className="space-y-1">
-              <Label>Annual gross income (USD)</Label>
-              <Input
-                type="number"
-                placeholder="75000"
-                {...register("annualIncome")}
-              />
-              {err.annualIncome && <p className="text-xs text-destructive">{err.annualIncome.message}</p>}
-            </div>
-          </div>
-
-          {/* ── Commute ── */}
-          <SectionHeading>Commute</SectionHeading>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <Label>Home address or zip</Label>
-              <Input placeholder="78701" {...register("homeAddress")} />
-            </div>
-            <div className="space-y-1">
-              <Label>Work address or zip</Label>
-              <Input placeholder="78703" {...register("workAddress")} />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <Label>Commute days per week</Label>
-              <Input
-                type="number"
-                min={1}
-                max={7}
-                placeholder="5"
-                {...register("commuteDaysPerWeek")}
-              />
-              {err.commuteDaysPerWeek && <p className="text-xs text-destructive">{err.commuteDaysPerWeek.message}</p>}
-            </div>
-            <div className="space-y-1">
-              <Label>One-way commute distance (miles)</Label>
-              <Input
-                type="number"
-                step="0.1"
-                placeholder="12.5"
-                {...register("oneWayCommuteMiles")}
-              />
-              <p className="text-xs text-muted-foreground">Auto-fills annual mileage in calculator</p>
-            </div>
-          </div>
-
-          {/* ── Fuel & Driving ── */}
-          <SectionHeading>Fuel &amp; Driving Preferences</SectionHeading>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <Label>Preferred fuel price ($/gal)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                placeholder="3.45"
-                {...register("preferredFuelPrice")}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label>Electricity rate ($/kWh)</Label>
-              <Input
-                type="number"
-                step="0.001"
-                placeholder="0.16"
-                {...register("electricityRate")}
-              />
-            </div>
-          </div>
-
+        <SectionHeading>Identity</SectionHeading>
+        <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
-            <Label>Typical driving style</Label>
-            <select className={selectCls} {...register("drivingStyle")}>
-              <option value="">Not specified</option>
-              <option value="city">City-heavy (lots of stop-and-go)</option>
-              <option value="mixed">Mixed</option>
-              <option value="highway">Highway-heavy (mostly open road)</option>
+            <Label className="text-sm text-gray-300">Display name</Label>
+            <Input placeholder="Jane Smith" {...register("displayName")} className={inputCls} />
+            {err.displayName && <p className="text-xs text-red-400">{err.displayName.message}</p>}
+          </div>
+          <div className="space-y-1">
+            <Label className="text-sm text-gray-300">Annual gross income (USD)</Label>
+            <Input type="number" placeholder="75000" {...register("annualIncome")} className={inputCls} />
+            {err.annualIncome && <p className="text-xs text-red-400">{err.annualIncome.message}</p>}
+          </div>
+        </div>
+
+        <SectionHeading>Commute</SectionHeading>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <Label className="text-sm text-gray-300">Home address or zip</Label>
+            <Input placeholder="78701" {...register("homeAddress")} className={inputCls} />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-sm text-gray-300">Work address or zip</Label>
+            <Input placeholder="78703" {...register("workAddress")} className={inputCls} />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <Label className="text-sm text-gray-300">Commute days per week</Label>
+            <Input type="number" min={1} max={7} placeholder="5" {...register("commuteDaysPerWeek")} className={inputCls} />
+            {err.commuteDaysPerWeek && <p className="text-xs text-red-400">{err.commuteDaysPerWeek.message}</p>}
+          </div>
+          <div className="space-y-1">
+            <Label className="text-sm text-gray-300">One-way commute distance (miles)</Label>
+            <Input type="number" step="0.1" placeholder="12.5" {...register("oneWayCommuteMiles")} className={inputCls} />
+            <p className="text-xs text-gray-500">Auto-fills annual mileage in calculator</p>
+          </div>
+        </div>
+
+        <SectionHeading>Fuel &amp; Driving Preferences</SectionHeading>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <Label className="text-sm text-gray-300">Preferred fuel price ($/gal)</Label>
+            <Input type="number" step="0.01" placeholder="3.45" {...register("preferredFuelPrice")} className={inputCls} />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-sm text-gray-300">Electricity rate ($/kWh)</Label>
+            <Input type="number" step="0.001" placeholder="0.16" {...register("electricityRate")} className={inputCls} />
+          </div>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-sm text-gray-300">Typical driving style</Label>
+          <select className={selectCls} {...register("drivingStyle")}>
+            <option value="">Not specified</option>
+            <option value="city">City-heavy (lots of stop-and-go)</option>
+            <option value="mixed">Mixed</option>
+            <option value="highway">Highway-heavy (mostly open road)</option>
+          </select>
+        </div>
+
+        <SectionHeading>Insurance</SectionHeading>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <Label className="text-sm text-gray-300">Current monthly premium (USD)</Label>
+            <Input type="number" placeholder="150" {...register("monthlyInsurancePremium")} className={inputCls} />
+            <p className="text-xs text-gray-500">Pre-fills insurance in cost calc</p>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-sm text-gray-300">State of registration</Label>
+            <select className={selectCls} {...register("stateOfRegistration")}>
+              <option value="">Select state</option>
+              {US_STATES.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
             </select>
           </div>
+        </div>
 
-          {/* ── Insurance ── */}
-          <SectionHeading>Insurance</SectionHeading>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <Label>Current monthly premium (USD)</Label>
-              <Input
-                type="number"
-                placeholder="150"
-                {...register("monthlyInsurancePremium")}
-              />
-              <p className="text-xs text-muted-foreground">Pre-fills insurance in cost calc</p>
-            </div>
-            <div className="space-y-1">
-              <Label>State of registration</Label>
-              <select className={selectCls} {...register("stateOfRegistration")}>
-                <option value="">Select state</option>
-                {US_STATES.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-            </div>
+        <SectionHeading>Vehicle Defaults</SectionHeading>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <Label className="text-sm text-gray-300">Ownership horizon (years)</Label>
+            <Input type="number" min={1} max={15} placeholder="5" {...register("ownershipHorizonYears")} className={inputCls} />
+            {err.ownershipHorizonYears && <p className="text-xs text-red-400">{err.ownershipHorizonYears.message}</p>}
+            <p className="text-xs text-gray-500">Sets default projection length</p>
           </div>
-
-          {/* ── Vehicle Defaults ── */}
-          <SectionHeading>Vehicle Defaults</SectionHeading>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <Label>Ownership horizon (years)</Label>
-              <Input
-                type="number"
-                min={1}
-                max={15}
-                placeholder="5"
-                {...register("ownershipHorizonYears")}
-              />
-              {err.ownershipHorizonYears && <p className="text-xs text-destructive">{err.ownershipHorizonYears.message}</p>}
-              <p className="text-xs text-muted-foreground">Sets default projection length</p>
-            </div>
-            <div className="space-y-1">
-              <Label>Currency display</Label>
-              <select className={selectCls} disabled>
-                <option>USD ($)</option>
-              </select>
-              <p className="text-xs text-muted-foreground">Additional currencies coming soon</p>
-            </div>
+          <div className="space-y-1">
+            <Label className="text-sm text-gray-300">Currency display</Label>
+            <select className={selectCls} disabled>
+              <option>USD ($)</option>
+            </select>
+            <p className="text-xs text-gray-500">Additional currencies coming soon</p>
           </div>
+        </div>
 
-          {saved && (
-            <p className="text-sm text-green-600">Profile saved</p>
-          )}
+        {saved && <p className="text-sm text-green-400">Profile saved</p>}
 
-          <Button type="submit" className="w-full">
-            Save profile
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+        <button
+          type="submit"
+          className="w-full py-2 rounded-lg text-sm font-semibold transition-opacity"
+          style={{ background: "linear-gradient(90deg, #00d4ff, #7c3aed)", color: "#fff" }}
+        >
+          Save profile
+        </button>
+      </form>
+    </div>
   );
 }

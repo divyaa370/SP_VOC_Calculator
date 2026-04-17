@@ -33,7 +33,7 @@ export function SavedAnalysisDetail() {
   }
 
   return (
-    <div className="w-full max-w-4xl space-y-4">
+    <div className="w-full max-w-4xl mx-auto space-y-4">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={() => navigate("/saved-analyses")}>← Back to saved</Button>
         <span className="text-sm text-muted-foreground">

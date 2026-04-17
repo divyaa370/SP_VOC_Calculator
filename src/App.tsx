@@ -1,7 +1,7 @@
 import { Suspense, useState, useEffect, useCallback } from "react";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Spinner } from "./components/ui/Spinner";
-import { useRoutes, Routes, Route, Navigate } from "react-router-dom";
+import { useRoutes, Routes, Route, Navigate, Link, useNavigate } from "react-router-dom";
 import { SignInForm } from "./components/auth/SignInForm";
 import { SignUpForm } from "./components/auth/SignUpForm";
 import { ForgotPasswordForm } from "./components/auth/ForgotPasswordForm";
@@ -41,18 +41,18 @@ function HomePage() {
   return (
     <div className="w-screen min-h-screen flex flex-col">
       <header className="flex items-center justify-between px-6 py-4 border-b">
-        <span className="font-semibold">TrueCost</span>
+        <span className="font-semibold text-white">TrueCost</span>
         <div className="flex items-center gap-4">
-          <a href="/saved-analyses" className="text-sm text-muted-foreground hover:underline">Saved</a>
-          <a href="/expenses" className="text-sm text-muted-foreground hover:underline">Expenses</a>
-          <a href="/search-history" className="text-sm text-muted-foreground hover:underline">History</a>
-          <a href="/compare" className="text-sm text-muted-foreground hover:underline">Compare</a>
-          <a href="/app/settings" className="text-sm text-muted-foreground hover:underline">Settings</a>
+          <Link to="/saved-analyses" className="text-sm text-muted-foreground hover:underline">Saved</Link>
+          <Link to="/expenses" className="text-sm text-muted-foreground hover:underline">Expenses</Link>
+          <Link to="/search-history" className="text-sm text-muted-foreground hover:underline">History</Link>
+          <Link to="/compare" className="text-sm text-muted-foreground hover:underline">Compare</Link>
+          <Link to="/app/settings" className="text-sm text-muted-foreground hover:underline">Settings</Link>
           <span className="text-sm text-muted-foreground">{user?.email}</span>
           <LogoutButton />
         </div>
       </header>
-      <main className="flex-1 p-6 flex flex-col items-center">
+      <main className="flex-1 p-6">
         {!itemData ? (
           <ItemEntryForm onSubmit={setItemData} />
         ) : (
@@ -67,6 +67,7 @@ function HomePage() {
 
 function SavedAnalysesPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [analyses, setAnalyses] = useState<SavedAnalysis[]>([]);
 
   const refresh = useCallback(async () => {
@@ -78,23 +79,21 @@ function SavedAnalysesPage() {
   return (
     <div className="w-screen min-h-screen flex flex-col">
       <header className="flex items-center justify-between px-6 py-4 border-b">
-        <span className="font-semibold">
-          <a href="/">TrueCost</a>
-        </span>
+        <Link to="/" className="font-semibold text-white">TrueCost</Link>
         <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground">{user?.email}</span>
           <LogoutButton />
         </div>
       </header>
-      <main className="flex-1 p-6 flex flex-col items-center">
-        <div className="w-full max-w-2xl space-y-4">
+      <main className="flex-1 p-6">
+        <div className="w-full max-w-2xl mx-auto space-y-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-semibold">Saved Analyses</h1>
-            <a href="/" className="text-sm underline text-muted-foreground">Back to calculator</a>
+            <h1 className="text-xl font-semibold text-white">Saved Analyses</h1>
+            <Link to="/" className="text-sm underline text-muted-foreground">Back to calculator</Link>
           </div>
           <SavedAnalyses
             analyses={analyses}
-            onView={(a) => { window.location.href = `/saved-analyses/${a.id}`; }}
+            onView={(a) => { navigate(`/saved-analyses/${a.id}`); }}
             onDelete={(id) => {
               deleteAnalysis(user?.id ?? "", id);
               refresh();
@@ -128,22 +127,35 @@ function App() {
                 <ProtectedRoute>
                   <div className="w-screen min-h-screen flex flex-col">
                     <header className="flex items-center justify-between px-6 py-4 border-b">
-                      <a href="/" className="font-semibold">TrueCost</a>
-                      <a href="/" className="text-sm text-muted-foreground underline">Back</a>
+                      <Link to="/" className="font-semibold text-white">TrueCost</Link>
+                      <Link to="/" className="text-sm text-muted-foreground underline">Back</Link>
                     </header>
-                    <main className="flex-1 p-6 flex justify-center">
-                      <Tabs defaultValue="account" className="w-full max-w-xl">
-                        <TabsList className="mb-4">
-                          <TabsTrigger value="account">Account</TabsTrigger>
-                          <TabsTrigger value="profile">Profile</TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="account">
-                          <AccountSettings />
-                        </TabsContent>
-                        <TabsContent value="profile">
-                          <UserProfileForm />
-                        </TabsContent>
-                      </Tabs>
+                    <main className="flex-1 p-6">
+                      <div className="w-full max-w-xl mx-auto space-y-4">
+                        <h1 className="text-xl font-semibold text-white">Settings</h1>
+                        <Tabs defaultValue="account" className="w-full">
+                          <TabsList className="mb-4 bg-transparent border border-white/10 p-1 rounded-xl gap-1">
+                            <TabsTrigger
+                              value="account"
+                              className="rounded-lg text-sm font-medium text-gray-400 data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:[background:linear-gradient(90deg,#00d4ff,#7c3aed)]"
+                            >
+                              Account
+                            </TabsTrigger>
+                            <TabsTrigger
+                              value="profile"
+                              className="rounded-lg text-sm font-medium text-gray-400 data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:[background:linear-gradient(90deg,#00d4ff,#7c3aed)]"
+                            >
+                              Profile
+                            </TabsTrigger>
+                          </TabsList>
+                          <TabsContent value="account">
+                            <AccountSettings />
+                          </TabsContent>
+                          <TabsContent value="profile">
+                            <UserProfileForm />
+                          </TabsContent>
+                        </Tabs>
+                      </div>
                     </main>
                   </div>
                 </ProtectedRoute>
@@ -174,7 +186,7 @@ function ComparisonModeWrapper() {
   return (
     <div className="w-screen min-h-screen flex flex-col">
       <header className="flex items-center justify-between px-6 py-4 border-b">
-        <a href="/" className="font-semibold">TrueCost</a>
+        <Link to="/" className="font-semibold text-white">TrueCost</Link>
         <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground">{user?.email}</span>
           <LogoutButton />

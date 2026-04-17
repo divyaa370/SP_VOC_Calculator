@@ -49,7 +49,7 @@ export function ResultsDashboard({ item, onReset, initialProjectionYears }: Resu
     : "Vehicle";
 
   return (
-    <div className="w-full max-w-5xl space-y-6">
+    <div className="w-full max-w-5xl mx-auto space-y-6">
       {/* Header Bar */}
       <div className="flex items-center justify-between py-2">
         {/* Left: Back to Search */}

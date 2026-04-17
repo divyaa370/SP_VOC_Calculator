@@ -338,7 +338,7 @@ export function CostDashboard({ item, onReset, initialProjectionYears }: CostDas
   }
 
   return (
-    <div className="w-full max-w-5xl space-y-6">
+    <div className="w-full max-w-5xl mx-auto space-y-6">
       {/* Vehicle label — kept for accessibility / test compatibility */}
       <p className="text-sm text-gray-400">{itemLabel}</p>
       <p className="text-xs text-gray-500 -mt-5">{freshnessNote}</p>

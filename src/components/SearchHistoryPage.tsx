@@ -42,14 +42,14 @@ export function SearchHistoryPage() {
   return (
     <div className="w-screen min-h-screen flex flex-col">
       <header className="flex items-center justify-between px-6 py-4 border-b">
-        <span className="font-semibold cursor-pointer" onClick={() => navigate("/")}>TrueCost</span>
+        <span className="font-semibold text-white cursor-pointer" onClick={() => navigate("/")}>TrueCost</span>
         <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground">{user?.email}</span>
           <LogoutButton />
         </div>
       </header>
-      <main className="flex-1 p-6 flex flex-col items-center">
-        <div className="w-full max-w-2xl space-y-4">
+      <main className="flex-1 p-6">
+        <div className="w-full max-w-2xl mx-auto space-y-4">
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-semibold">Search History</h1>
             <button className="text-sm underline text-muted-foreground" onClick={() => navigate("/")}>

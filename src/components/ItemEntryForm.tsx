@@ -199,7 +199,7 @@ export function ItemEntryForm({ onSubmit, defaultValues }: ItemEntryFormProps) {
 
   return (
     <div
-      className="w-full max-w-xl rounded-2xl border"
+      className="w-full max-w-xl mx-auto rounded-2xl border"
       style={{ backgroundColor: "#1e1e3f", borderColor: "rgba(255,255,255,0.08)" }}
     >
       <div className="px-6 pt-6 pb-3">
