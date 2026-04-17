@@ -13,7 +13,12 @@ import { getMaintenanceCostPerMile } from "../data/maintenanceRates";
 import { NATIONAL_AVG_MONTHLY_INSURANCE } from "../lib/constants";
 import { getInsuranceMultiplier } from "../data/insuranceIndex";
 import { useLiveData, formatDataAge } from "../context/LiveDataContext";
-import { computeSustainabilityScore, scoreToLabel } from "../lib/sustainabilityScore";
+import {
+  computeScoreFactors,
+  scoreTotalFromFactors,
+  scoreToLabel,
+  scoreToHex,
+} from "../lib/sustainabilityScore";
 import { Leaf, DollarSign, Wrench, Shield, TrendingDown } from "lucide-react";
 
 // ── Calculation engine ────────────────────────────────────────────────────
@@ -212,8 +217,14 @@ export function CostDashboard({ item, onReset, initialProjectionYears }: CostDas
     ? `${car.year} ${car.make} ${car.model}`
     : `${(item as { breed: string; petType: string }).breed} (${(item as { petType: string }).petType})`;
 
-  // Sustainability score
-  const sustainScore = computeSustainabilityScore(item);
+  // Sustainability score — computed from actual cost data so factors match the total
+  const costSnapshot = {
+    monthlyTotal: monthlyAll,
+    monthlyMaintenance: costs.Maintenance,
+    monthlyInsurance: costs.Insurance,
+  };
+  const scoreFactors = computeScoreFactors(item, costSnapshot);
+  const sustainScore = scoreTotalFromFactors(scoreFactors);
   const sustainLabel = scoreToLabel(sustainScore);
   const sustainLabelUpper =
     sustainScore >= 80 ? "EXCELLENT SUSTAINABILITY"
@@ -222,31 +233,11 @@ export function CostDashboard({ item, onReset, initialProjectionYears }: CostDas
     : sustainScore >= 35 ? "POOR SUSTAINABILITY"
     : "VERY POOR SUSTAINABILITY";
 
-  const sustainScoreColor =
-    sustainScore >= 80 ? "#22c55e"
-    : sustainScore >= 65 ? "#eab308"
-    : sustainScore >= 50 ? "#f97316"
-    : "#ef4444";
+  const sustainScoreColor = scoreToHex(sustainScore);
+  const sustainBarColor = sustainScoreColor;
 
-  const sustainBarColor =
-    sustainScore >= 80 ? "#22c55e"
-    : sustainScore >= 65 ? "#eab308"
-    : sustainScore >= 50 ? "#f97316"
-    : "#ef4444";
-
-  // Score factor sub-scores (display only — derived from computed costs for UI visualization)
-  const financialBurdenScore = car
-    ? Math.max(10, Math.min(98, Math.round(100 - (monthlyAll / 5000) * 200)))
-    : 50;
-  const maintenanceScore = car
-    ? Math.max(15, Math.min(98, Math.round(100 - (costs.Maintenance * 12 / 50))))
-    : 50;
-  const insuranceBurdenScore = car
-    ? Math.max(10, Math.min(98, Math.round(100 - (costs.Insurance / 400) * 80)))
-    : 50;
-  const serviceReliabilityScore = car
-    ? ({ electric: 95, hybrid: 82, diesel: 65, gasoline: 58 } as Record<string, number>)[car.fuelType] ?? 58
-    : 70;
+  // Factor scores — these are the exact values that produce sustainScore when weighted
+  const { financialBurden, maintenance, insurance, serviceReliability } = scoreFactors;
 
   // Score summary text
   const scoreSummaryText = car
@@ -453,7 +444,7 @@ export function CostDashboard({ item, onReset, initialProjectionYears }: CostDas
           <Leaf className="w-4 h-4 text-green-400" />
           <h2 className="text-sm font-semibold text-white">Financial Sustainability Score</h2>
         </div>
-        <p className="text-xs text-gray-400 mb-5">Based on fuel type, mileage, and cost efficiency</p>
+        <p className="text-xs text-gray-400 mb-5">Weighted score: financial burden (40%) · maintenance (25%) · insurance (20%) · service reliability (15%)</p>
 
         {/* Score display */}
         <div className="flex items-end justify-between mb-3">
@@ -489,10 +480,18 @@ export function CostDashboard({ item, onReset, initialProjectionYears }: CostDas
         {/* Score Factors */}
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Score Factors:</p>
         <div className="space-y-3">
-          <FactorBar label="Financial Burden" weight="40%" score={financialBurdenScore} color="#22c55e" />
-          <FactorBar label="Maintenance Reliability" weight="25%" score={maintenanceScore} color="#eab308" />
-          <FactorBar label="Insurance Burden" weight="20%" score={insuranceBurdenScore} color="#22c55e" />
-          <FactorBar label="Service Reliability" weight="15%" score={serviceReliabilityScore} color="#22c55e" />
+          <FactorBar label="Financial Burden" weight="40%" score={financialBurden} color={scoreToHex(financialBurden)} />
+          <FactorBar label="Maintenance Cost" weight="25%" score={maintenance} color={scoreToHex(maintenance)} />
+          <FactorBar label="Insurance Burden" weight="20%" score={insurance} color={scoreToHex(insurance)} />
+          <FactorBar label="Service Reliability" weight="15%" score={serviceReliability} color={scoreToHex(serviceReliability)} />
+        </div>
+        {/* Weighted breakdown */}
+        <div className="mt-4 pt-3 border-t text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+          <span>{financialBurden} × 0.40 = {(financialBurden * 0.40).toFixed(1)}</span>
+          <span>{maintenance} × 0.25 = {(maintenance * 0.25).toFixed(1)}</span>
+          <span>{insurance} × 0.20 = {(insurance * 0.20).toFixed(1)}</span>
+          <span>{serviceReliability} × 0.15 = {(serviceReliability * 0.15).toFixed(1)}</span>
+          <span className="text-gray-300 font-medium">= {sustainScore} total</span>
         </div>
       </div>
 

@@ -155,8 +155,8 @@ export function ComparisonMode({ userId: _userId }: ComparisonModeProps) {
   const totalB = Object.values(costsB).reduce((a, b) => a + b, 0);
   const projA = buildYearlyProjection(costsA, itemA);
   const projB = buildYearlyProjection(costsB, itemB);
-  const scoreA = computeSustainabilityScore(itemA);
-  const scoreB = computeSustainabilityScore(itemB);
+  const scoreA = computeSustainabilityScore(itemA, { monthlyTotal: totalA, monthlyMaintenance: costsA.Maintenance, monthlyInsurance: costsA.Insurance });
+  const scoreB = computeSustainabilityScore(itemB, { monthlyTotal: totalB, monthlyMaintenance: costsB.Maintenance, monthlyInsurance: costsB.Insurance });
 
   const comparisonData = projA.map((row, i) => ({
     year: row.year,
