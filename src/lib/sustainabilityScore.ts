@@ -12,13 +12,15 @@ export interface CostSnapshot {
 // ── Factor scores (0–100 each) ────────────────────────────────────────────
 
 export interface ScoreFactors {
-  /** 40% weight — how affordable is the all-in monthly cost */
+  /** 35% weight — tailpipe emissions, fuel type, MPG efficiency */
+  environmentalImpact: number;
+  /** 25% weight — how affordable is the all-in monthly cost */
   financialBurden: number;
-  /** 25% weight — how low/predictable are maintenance costs */
+  /** 20% weight — how low/predictable are maintenance costs */
   maintenance: number;
-  /** 20% weight — how reasonable is the insurance premium */
+  /** 10% weight — how reasonable is the insurance premium */
   insurance: number;
-  /** 15% weight — fuel-type reliability + mileage efficiency */
+  /** 10% weight — fuel-type mechanical reliability + mileage */
   serviceReliability: number;
 }
 
@@ -27,61 +29,82 @@ function clamp(v: number, min: number, max: number) {
 }
 
 /**
- * Compute the four factor scores from item + cost data.
- * Each factor is independently scored 0–100 with clear benchmarks:
+ * Compute all five factor scores from item + cost data.
  *
- *  Financial Burden  — excellent ≤$400/mo, poor ≥$1,200/mo
- *  Maintenance       — excellent ≤$600/yr, poor ≥$2,800/yr
- *  Insurance         — excellent ≤$80/mo,  poor ≥$380/mo
- *  Service Reliability — fuel type base ± mileage adjustment
+ *  Financial Burden    — excellent ≤$400/mo,  poor ≥$1,200/mo
+ *  Maintenance         — excellent ≤$600/yr,  poor ≥$2,800/yr
+ *  Insurance           — excellent ≤$80/mo,   poor ≥$380/mo
+ *  Service Reliability — fuel-type base ± mileage (fewer parts = more reliable)
+ *  Environmental Impact— fuel type emissions base + mileage penalty + MPG bonus
+ *    electric=95, hybrid=72, gasoline=40, diesel=25
+ *    every 1k mi above/below 12k = ∓2 pts (±10 max)
+ *    gasoline/hybrid MPG bonus: (mpg−25)/5 × 3, clamped ±6 pts
  */
 export function computeScoreFactors(
   item: ItemFormData,
   costs: CostSnapshot,
 ): ScoreFactors {
   if (item.category !== "car") {
-    return { financialBurden: 50, maintenance: 50, insurance: 50, serviceReliability: 70 };
+    return {
+      financialBurden: 50,
+      maintenance: 50,
+      insurance: 50,
+      serviceReliability: 70,
+      environmentalImpact: 60,
+    };
   }
 
   const car = item as CarFormData;
   const annualMaint = costs.monthlyMaintenance * 12;
 
-  // Financial Burden: $200/mo → 85, $700/mo → 47, $1,200/mo → 10
+  // ── Financial Burden ──
   const financialBurden = clamp(100 - (costs.monthlyTotal / 1200) * 90, 5, 98);
 
-  // Maintenance: $0/yr → 95, $1,400/yr → 52, $2,800/yr → 10
+  // ── Maintenance ──
   const maintenance = clamp(95 - (annualMaint / 2800) * 85, 10, 95);
 
-  // Insurance: $80/mo → 81, $230/mo → 45, $380/mo → 10
+  // ── Insurance ──
   const insurance = clamp(100 - (costs.monthlyInsurance / 380) * 90, 10, 95);
 
-  // Service Reliability: base by fuel type, adjusted ±5 pts for mileage
+  // ── Service Reliability (mechanical) ──
   const reliabilityBase: Record<string, number> = {
-    electric: 92,
-    hybrid: 78,
-    diesel: 60,
-    gasoline: 52,
+    electric: 92, hybrid: 78, diesel: 60, gasoline: 52,
   };
-  const base = reliabilityBase[car.fuelType] ?? 52;
-  const mileageAdj = clamp((15000 - car.annualMileage) / 1000, -5, 5);
-  const serviceReliability = clamp(base + mileageAdj, 10, 98);
+  const relBase = reliabilityBase[car.fuelType] ?? 52;
+  const relMileageAdj = clamp((15000 - car.annualMileage) / 1000, -5, 5);
+  const serviceReliability = clamp(relBase + relMileageAdj, 10, 98);
 
-  return { financialBurden, maintenance, insurance, serviceReliability };
+  // ── Environmental Impact (emissions) ──
+  const emissionsBase: Record<string, number> = {
+    electric: 95, hybrid: 72, gasoline: 40, diesel: 25,
+  };
+  const envBase = emissionsBase[car.fuelType] ?? 40;
+  // Mileage: every 1k mi above/below 12k baseline = ∓2 pts, max ±10
+  const envMileageAdj = clamp((12000 - car.annualMileage) / 1000 * 2, -10, 10);
+  // MPG efficiency bonus for ICE vehicles (not applicable to EVs)
+  const mpgBonus = car.fuelType !== "electric"
+    ? clamp((car.mpg - 25) / 5 * 3, -6, 6)
+    : 0;
+  const environmentalImpact = clamp(envBase + envMileageAdj + mpgBonus, 5, 98);
+
+  return { financialBurden, maintenance, insurance, serviceReliability, environmentalImpact };
 }
 
 /**
- * Weighted average of the four factors → final 0–100 score.
- *   Financial Burden   40%
- *   Maintenance        25%
- *   Insurance          20%
- *   Service Reliability 15%
+ * Weighted average of all five factors → final 0–100 score.
+ *   Environmental Impact 35%  ← primary sustainability dimension
+ *   Financial Burden     25%
+ *   Maintenance          20%
+ *   Insurance            10%
+ *   Service Reliability  10%
  */
 export function scoreTotalFromFactors(f: ScoreFactors): number {
   return Math.round(
-    f.financialBurden   * 0.40 +
-    f.maintenance       * 0.25 +
-    f.insurance         * 0.20 +
-    f.serviceReliability * 0.15,
+    f.environmentalImpact * 0.35 +
+    f.financialBurden     * 0.25 +
+    f.maintenance         * 0.20 +
+    f.insurance           * 0.10 +
+    f.serviceReliability  * 0.10,
   );
 }
 
@@ -102,7 +125,6 @@ export function computeSustainabilityScore(
   }
 
   if (!costs) {
-    // Simple fallback when cost data isn't available (e.g. comparison summary cards)
     const car = item as CarFormData;
     const baseByFuel: Record<string, number> = {
       electric: 85, hybrid: 70, diesel: 45, gasoline: 35,
